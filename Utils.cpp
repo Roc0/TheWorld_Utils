@@ -45,6 +45,28 @@ namespace TheWorld_Utils
 #endif
 	}
 	
+	MeshCacheBuffer::MeshCacheBuffer(const MeshCacheBuffer& c)
+	{
+		*this = c;
+	}
+
+	void MeshCacheBuffer::operator=(const MeshCacheBuffer& c)
+	{
+		m_meshFilePath = c.m_meshFilePath;
+		m_cacheDir = c.m_cacheDir;
+		m_meshId = c.m_meshId;
+		m_gridStepInWU = c.m_gridStepInWU;
+		m_numVerticesPerSize = c.m_numVerticesPerSize;
+		m_level = c.m_level;
+		m_lowerXGridVertex = c.m_lowerXGridVertex;
+		m_lowerZGridVertex = c.m_lowerZGridVertex;
+
+#ifdef _THEWORLD_CLIENT
+		m_heightmapFilePath = c.m_heightmapFilePath;
+		m_normalmapFilePath = c.m_normalmapFilePath;
+#endif
+	}
+
 	std::string MeshCacheBuffer::getMeshIdFromMeshCache(void)
 	{
 		if (!fs::exists(m_meshFilePath))

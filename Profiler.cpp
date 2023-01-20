@@ -16,12 +16,12 @@ namespace TheWorld_Utils
 	{
 	}
 
-	void ProfilingData::startElapsed(void)
+	void ProfilingData::startElapsedNonMultithread(void)
 	{
 		m_clock.tick();
 	}
 
-	void ProfilingData::addElapsed(size_t elapsed)
+	void ProfilingData::addElapsedMcs(size_t elapsed)
 	{
 		if (elapsed == -1)
 		{
@@ -31,6 +31,10 @@ namespace TheWorld_Utils
 		std::lock_guard<std::recursive_mutex> lock(m_Mtx);
 		m_num++;
 		m_elapsed += elapsed;
+		if (elapsed > m_maxElapsed)
+			m_maxElapsed = elapsed;
+		if (elapsed < m_minElapsed || m_minElapsed == 0)
+			m_minElapsed = elapsed;
 	}
 
 	void ProfilingData::reset(void)
@@ -38,6 +42,8 @@ namespace TheWorld_Utils
 		std::lock_guard<std::recursive_mutex> lock(m_Mtx);
 		m_num = 0;
 		m_elapsed = 0;
+		m_minElapsed = 0;
+		m_maxElapsed = 0;
 	}
 
 	size_t ProfilingData::num(void)
@@ -45,14 +51,24 @@ namespace TheWorld_Utils
 		return m_num;
 	}
 
-	size_t ProfilingData::elapsed(size_t& num)
+	size_t ProfilingData::elapsedMcs(size_t& num)
 	{
 		std::lock_guard<std::recursive_mutex> lock(m_Mtx);
 		num = m_num;
 		return m_elapsed;
 	}
 
-	size_t ProfilingData::averageElapsed(size_t& num)
+	size_t ProfilingData::minElapsedMcs(void)
+	{
+		return m_minElapsed;
+	}
+
+	size_t ProfilingData::maxElapsedMcs(void)
+	{
+		return m_maxElapsed;
+	}
+
+	size_t ProfilingData::averageElapsedMcs(size_t& num)
 	{
 		std::lock_guard<std::recursive_mutex> lock(m_Mtx);
 		num = m_num;
@@ -74,7 +90,8 @@ namespace TheWorld_Utils
 
 	ProfilingData* ProfilerInternal::getData(std::string function, std::string name)
 	{
-		std::string n = function.empty() ? name : function + "_" + name;
+		std::string n = function.empty() ? name : function + "_***" + name + "***";
+		//std::string n = function.empty() ? name : function + "_" + name;
 		std::lock_guard<std::recursive_mutex> lock(m_mapProfilingDataMtx);
 		if (!m_mapProfilingData.contains(n))
 		{
@@ -109,14 +126,14 @@ namespace TheWorld_Utils
 		return names;
 	}
 
-	void ProfilerInternal::startElapsed(std::string function, std::string name)
+	void ProfilerInternal::startElapsedNonMultithread(std::string function, std::string name)
 	{
-		getData(function, name)->startElapsed();
+		getData(function, name)->startElapsedNonMultithread();
 	}
 		
-	void ProfilerInternal::addElapsed(std::string function, std::string name, size_t elapsed)
+	void ProfilerInternal::addElapsedMcs(std::string function, std::string name, size_t elapsed)
 	{
-		getData(function, name)->addElapsed(elapsed);
+		getData(function, name)->addElapsedMcs(elapsed);
 	}
 
 	void ProfilerInternal::reset(std::string function, std::string name)
@@ -129,14 +146,24 @@ namespace TheWorld_Utils
 		return getData(function, name)->num();
 	}
 
-	size_t ProfilerInternal::elapsed(std::string function, std::string name, size_t& num)
+	size_t ProfilerInternal::elapsedMcs(std::string function, std::string name, size_t& num)
 	{
-		return getData(function, name)->elapsed(num);
+		return getData(function, name)->elapsedMcs(num);
 	}
 
-	size_t ProfilerInternal::averageElapsed(std::string function, std::string name, size_t& num)
+	size_t ProfilerInternal::averageElapsedMcs(std::string function, std::string name, size_t& num)
 	{
-		return getData(function, name)->averageElapsed(num);
+		return getData(function, name)->averageElapsedMcs(num);
+	}
+
+	size_t ProfilerInternal::minElapsedMcs(std::string function, std::string name)
+	{
+		return getData(function, name)->minElapsedMcs();
+	}
+
+	size_t ProfilerInternal::maxElapsedMcs(std::string function, std::string name)
+	{
+		return getData(function, name)->maxElapsedMcs();
 	}
 
 	Profiler::Profiler(void)
@@ -157,14 +184,19 @@ namespace TheWorld_Utils
 		return ProfilerInternal::get().names(function);
 	}
 
-	void Profiler::startElapsed(std::string function, std::string name)
+	void Profiler::startElapsedNonMultithread(std::string function, std::string name)
 	{
-		ProfilerInternal::get().startElapsed(function, name);
+		ProfilerInternal::get().startElapsedNonMultithread(function, name);
 	}
 
-	void Profiler::addElapsed(std::string function, std::string name, size_t elapsed)
+	void Profiler::addElapsedMcs(std::string function, std::string name, size_t elapsed)
 	{
-		ProfilerInternal::get().addElapsed(function, name, elapsed);
+		ProfilerInternal::get().addElapsedMcs(function, name, elapsed);
+	}
+
+	void Profiler::addElapsedMs(std::string function, std::string name, size_t elapsed)
+	{
+		ProfilerInternal::get().addElapsedMcs(function, name, elapsed * 1000);
 	}
 
 	void Profiler::reset(std::string function, std::string name)
@@ -177,14 +209,45 @@ namespace TheWorld_Utils
 		return ProfilerInternal::get().num(function, name);
 	}
 
-	size_t Profiler::elapsed(std::string function, std::string name, size_t& num)
+	size_t Profiler::elapsedMcs(std::string function, std::string name, size_t& num)
 	{
-		return ProfilerInternal::get().elapsed(function, name, num);
+		return ProfilerInternal::get().elapsedMcs(function, name, num);
 	}
 
-	size_t Profiler::averageElapsed(std::string function, std::string name, size_t& num)
+	size_t Profiler::averageElapsedMcs(std::string function, std::string name, size_t& num)
 	{
-		return ProfilerInternal::get().averageElapsed(function, name, num);
+		return ProfilerInternal::get().averageElapsedMcs(function, name, num);
 	}
+
+	size_t Profiler::elapsedMs(std::string function, std::string name, size_t& num)
+	{
+		return ProfilerInternal::get().elapsedMcs(function, name, num) / 1000;
+	}
+
+	size_t Profiler::averageElapsedMs(std::string function, std::string name, size_t& num)
+	{
+		return ProfilerInternal::get().averageElapsedMcs(function, name, num) / 1000;
+	}
+	
+	size_t Profiler::minElapsedMcs(std::string function, std::string name)
+	{
+		return ProfilerInternal::get().minElapsedMcs(function, name);
+	}
+
+	size_t Profiler::maxElapsedMcs(std::string function, std::string name)
+	{
+		return ProfilerInternal::get().maxElapsedMcs(function, name);
+	}
+
+	size_t Profiler::minElapsedMs(std::string function, std::string name)
+	{
+		return ProfilerInternal::get().minElapsedMcs(function, name) / 1000;
+	}
+
+	size_t Profiler::maxElapsedMs(std::string function, std::string name)
+	{
+		return ProfilerInternal::get().maxElapsedMcs(function, name) / 1000;
+	}
+
 }
 

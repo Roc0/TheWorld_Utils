@@ -118,6 +118,11 @@ namespace TheWorld_Utils
 			_method = method;
 		}
 
+		bool counterStarted(void)
+		{
+			return _counterStarted;
+		}
+
 		template <class TT = TimeT>	TT duration() const
 		{
 			Expects(_end != timep_t{} && "toc before reporting");
@@ -144,6 +149,9 @@ namespace TheWorld_Utils
 	public:
 		MeshCacheBuffer(void);
 		MeshCacheBuffer(std::string cacheDir, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex);
+		MeshCacheBuffer(const MeshCacheBuffer& c);
+
+		void operator=(const MeshCacheBuffer& c);
 
 		std::string getMeshIdFromMeshCache(void);
 		void refreshVerticesFromBuffer(std::string buffer, std::string& meshIdFromBuffer, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY);
@@ -202,10 +210,10 @@ namespace TheWorld_Utils
 	class ThreadPool
 	{
 	public:
-		void Start(size_t num_threads = 0, /*const std::function<void()>* threadInitFunction = nullptr, const std::function<void()>* threadDeinitFunction = nullptr,*/ ThreadInitDeinit* threadInitDeinit = nullptr);
-		void QueueJob(const std::function<void()>& job);
-		void Stop();
-		bool busy();
+		__declspec(dllexport) void Start(size_t num_threads = 0, /*const std::function<void()>* threadInitFunction = nullptr, const std::function<void()>* threadDeinitFunction = nullptr,*/ ThreadInitDeinit* threadInitDeinit = nullptr);
+		__declspec(dllexport) void QueueJob(const std::function<void()>& job);
+		__declspec(dllexport) void Stop();
+		__declspec(dllexport) bool busy();
 
 	private:
 		void ThreadLoop();
