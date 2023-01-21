@@ -7,11 +7,34 @@
 #include "Utils.h"
 #include <filesystem>
 #include <string>
+#include <plog/Initializers/RollingFileInitializer.h>
 
 namespace fs = std::filesystem;
 
 namespace TheWorld_Utils
 {
+	void Utils::plogInit(plog::Severity sev, plog::IAppender* appender)
+	{
+		plog::init(sev, appender);
+
+		PLOG(plog::get()->getMaxSeverity()) << "***************";
+		PLOG(plog::get()->getMaxSeverity()) << "Log initilized!";
+		PLOG(plog::get()->getMaxSeverity()) << "***************";
+	}
+
+	void Utils::plogDenit(void)
+	{
+		PLOG(plog::get()->getMaxSeverity()) << "*****************";
+		PLOG(plog::get()->getMaxSeverity()) << "Log Terminated!";
+		PLOG(plog::get()->getMaxSeverity()) << "*****************";
+	}
+
+	void Utils::plogSetMaxSeverity(plog::Severity sev)
+	{
+		plog::get()->setMaxSeverity(sev);
+		PLOG(plog::get()->getMaxSeverity()) << "Log severity changed to: " << std::to_string(sev);
+	}
+
 	MeshCacheBuffer::MeshCacheBuffer(void)
 	{
 		m_gridStepInWU = -1;
@@ -583,22 +606,36 @@ namespace TheWorld_Utils
 
 #endif
 
-	void ThreadPool::Start(size_t num_threads, /*const std::function<void()>* threadInitFunction, const std::function<void()>* threadDeinitFunction,*/ ThreadInitDeinit* threadInitDeinit)
+	void ThreadPool::Start(std::string label, size_t num_threads, /*const std::function<void()>* threadInitFunction, const std::function<void()>* threadDeinitFunction,*/ ThreadInitDeinit* threadInitDeinit)
 	{
+		m_label = label;
 		m_threadInitDeinit = threadInitDeinit;
+		m_lastDiagnosticTime = std::chrono::time_point_cast<TheWorld_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
+		m_lastAllWorkingStatus = false;
 		//m_threadInitFunction = threadInitFunction;
 		//m_threadDeinitFunction = threadDeinitFunction;
 		uint32_t _num_threads = (uint32_t)num_threads;
 		if (_num_threads <= 0)
 			_num_threads  = std::thread::hardware_concurrency(); // Max # of threads the system supports
 		//const uint32_t num_threads = 2;
-		threads.resize(_num_threads);
+		m_threads.resize(_num_threads);
 		for (uint32_t i = 0; i < _num_threads; i++)
 		{
-			threads.at(i) = std::thread(&ThreadPool::ThreadLoop, this);
+			m_threads.at(i) = std::thread(&ThreadPool::ThreadLoop, this);
 		}
 	}
-	
+
+	size_t ThreadPool::getNumWorkingThreads(size_t& m_maxThreads)
+	{
+		m_maxThreads = m_threads.size();
+		return m_workingThreads;
+	}
+		
+	bool ThreadPool::allThreadsWorking(void)
+	{
+		return m_workingThreads >= m_threads.size();
+	}
+
 	void ThreadPool::ThreadLoop()
 	{
 		if (m_threadInitDeinit != nullptr)
@@ -612,16 +649,33 @@ namespace TheWorld_Utils
 		{
 			std::function<void()> job;
 			{
-				std::unique_lock<std::mutex> lock(queue_mutex);
-				mutex_condition.wait(lock, [this] { return !jobs.empty() || should_terminate; });
-				if (should_terminate)
+				std::unique_lock<std::mutex> lock(m_queue_mutex);
+				m_mutex_condition.wait(lock, [this] { return !m_jobs.empty() || m_should_terminate; });
+				if (m_should_terminate)
 				{
 					break;
 				}
-				job = jobs.front();
-				jobs.pop();
+				job = m_jobs.front();
+				m_jobs.pop();
+				m_workingThreads++;
+
+				TheWorld_Utils::MsTimePoint now = std::chrono::time_point_cast<TheWorld_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
+				size_t numThreads = m_threads.size();
+				bool allThreadsWorking = m_workingThreads >= numThreads;
+				if ((now - m_lastDiagnosticTime).count() >= 1000)
+				{
+					if (allThreadsWorking)
+						PLOG_INFO << "ThreadPool " << m_label << " has all threads working (" << std::to_string(m_workingThreads) << ":" << std::to_string(numThreads) << ") - Queue size: " << m_jobs.size();
+					//else
+					//	if (allThreadsWorking != m_lastAllWorkingStatus)
+					//		PLOG_INFO << "ThreadPool " << m_label << " has free threads (" << std::to_string(m_workingThreads + 1) << ":" << std::to_string(numThreads) << ")";
+
+					m_lastDiagnosticTime = now;
+					m_lastAllWorkingStatus = allThreadsWorking;
+				}
 			}
 			job();
+			m_workingThreads--;
 		}
 
 		if (m_threadInitDeinit != nullptr)
@@ -635,18 +689,18 @@ namespace TheWorld_Utils
 	void ThreadPool::QueueJob(const std::function<void()>& job)
 	{
 		{
-			std::unique_lock<std::mutex> lock(queue_mutex);
-			jobs.push(job);
+			std::unique_lock<std::mutex> lock(m_queue_mutex);
+			m_jobs.push(job);
 		}
-		mutex_condition.notify_one();
+		m_mutex_condition.notify_one();
 	}
 	
 	bool ThreadPool::busy()
 	{
 		bool poolbusy;
 		{
-			std::unique_lock<std::mutex> lock(queue_mutex);
-			poolbusy = !jobs.empty();
+			std::unique_lock<std::mutex> lock(m_queue_mutex);
+			poolbusy = !m_jobs.empty();
 		}
 		return poolbusy;
 	}
@@ -654,14 +708,14 @@ namespace TheWorld_Utils
 	void ThreadPool::Stop()
 	{
 		{
-			std::unique_lock<std::mutex> lock(queue_mutex);
-			should_terminate = true;
+			std::unique_lock<std::mutex> lock(m_queue_mutex);
+			m_should_terminate = true;
 		}
-		mutex_condition.notify_all();
-		for (std::thread& active_thread : threads) {
+		m_mutex_condition.notify_all();
+		for (std::thread& active_thread : m_threads) {
 			active_thread.join();
 		}
-		threads.clear();
+		m_threads.clear();
 	}
 	
 	std::string Utils::ReplaceString(std::string subject, const std::string& search, const std::string& replace)

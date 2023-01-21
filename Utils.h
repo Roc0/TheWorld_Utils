@@ -200,39 +200,15 @@ namespace TheWorld_Utils
 #endif
 	};
 	
-	class ThreadInitDeinit
-	{
-		friend class ThreadPool;
-		virtual void threadInit(void) = 0;
-		virtual void threadDeinit(void) = 0;
-	};
-
-	class ThreadPool
-	{
-	public:
-		__declspec(dllexport) void Start(size_t num_threads = 0, /*const std::function<void()>* threadInitFunction = nullptr, const std::function<void()>* threadDeinitFunction = nullptr,*/ ThreadInitDeinit* threadInitDeinit = nullptr);
-		__declspec(dllexport) void QueueJob(const std::function<void()>& job);
-		__declspec(dllexport) void Stop();
-		__declspec(dllexport) bool busy();
-
-	private:
-		void ThreadLoop();
-
-		bool should_terminate = false;           // Tells threads to stop looking for jobs
-		std::mutex queue_mutex;                  // Prevents data races to the job queue
-		std::condition_variable mutex_condition; // Allows threads to wait on new jobs or termination 
-		std::vector<std::thread> threads;
-		std::queue<std::function<void()>> jobs;
-		//const std::function<void()>* m_threadInitFunction = nullptr;
-		//const std::function<void()>* m_threadDeinitFunction = nullptr;
-		ThreadInitDeinit* m_threadInitDeinit = nullptr;
-	};
-
 	std::string ToString(GUID* guid);
 
 	class Utils
 	{
 	public:
+		__declspec(dllexport) static void plogInit(plog::Severity sev, plog::IAppender* appender);
+		__declspec(dllexport) static void plogSetMaxSeverity(plog::Severity sev);
+		__declspec(dllexport) static void plogDenit(void);
+
 		static std::string ReplaceString(std::string subject, const std::string& search, const std::string& replace);
 
 		static void ReplaceStringInPlace(std::string& subject, const std::string& search, const std::string& replace);
@@ -423,6 +399,40 @@ namespace TheWorld_Utils
 	template <typename F> FinalAction<F> finally(F f) { return FinalAction<F>(f); }
 
 	typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> MsTimePoint;
+
+	class ThreadInitDeinit
+	{
+		friend class ThreadPool;
+		virtual void threadInit(void) = 0;
+		virtual void threadDeinit(void) = 0;
+	};
+
+	class ThreadPool
+	{
+	public:
+		__declspec(dllexport) void Start(std::string label, size_t num_threads = 0, /*const std::function<void()>* threadInitFunction = nullptr, const std::function<void()>* threadDeinitFunction = nullptr,*/ ThreadInitDeinit* threadInitDeinit = nullptr);
+		__declspec(dllexport) void QueueJob(const std::function<void()>& job);
+		__declspec(dllexport) void Stop();
+		__declspec(dllexport) bool busy();
+		__declspec(dllexport) size_t getNumWorkingThreads(size_t& m_maxThreads);
+		__declspec(dllexport) bool allThreadsWorking(void);
+
+	private:
+		void ThreadLoop();
+
+		std::string m_label;
+		bool m_should_terminate = false;           // Tells threads to stop looking for jobs
+		size_t m_workingThreads = 0;
+		std::mutex m_queue_mutex;                  // Prevents data races to the job queue
+		std::condition_variable m_mutex_condition; // Allows threads to wait on new jobs or termination 
+		std::vector<std::thread> m_threads;
+		std::queue<std::function<void()>> m_jobs;
+		//const std::function<void()>* m_threadInitFunction = nullptr;
+		//const std::function<void()>* m_threadDeinitFunction = nullptr;
+		ThreadInitDeinit* m_threadInitDeinit = nullptr;
+		TheWorld_Utils::MsTimePoint m_lastDiagnosticTime = std::chrono::time_point_cast<TheWorld_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
+		bool m_lastAllWorkingStatus = false;
+	};
 
 	template <typename T>
 	void serializeToByteStream(T in, BYTE* stream, size_t& size)
