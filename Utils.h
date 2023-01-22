@@ -239,7 +239,8 @@ namespace TheWorld_Utils
 			return false;
 		}
 
-		static int align(int x, int a) {
+		static int align(int x, int a)
+		{
 			return (x + a - 1) & ~(a - 1);
 		}
 
@@ -259,7 +260,8 @@ namespace TheWorld_Utils
 		//	return boost::iequals(str1, str2);
 		//}
 
-		static float square(float f) {
+		static float square(float f) 
+		{
 			return f * f;
 		}
 
@@ -269,7 +271,8 @@ namespace TheWorld_Utils
 		* @note isPowerOfTwo(x) == true -> nextPowerOfTwo(x) == x
 		* @note nextPowerOfTwo(x) = 2 << log2(x-1)
 		*/
-		static uint32_t nextPowerOfTwo(uint32_t x) {
+		static uint32_t nextPowerOfTwo(uint32_t x) 
+		{
 			assert(x != 0);
 			// On modern CPUs this is supposed to be as fast as using the bsr instruction.
 			x--;
@@ -282,34 +285,40 @@ namespace TheWorld_Utils
 		}
 
 		template <typename T>
-		static T max2(const T& a, const T& b) {
+		static T max2(const T& a, const T& b) 
+		{
 			return a > b ? a : b;
 		}
 
 		template <typename T>
-		static T min2(const T& a, const T& b) {
+		static T min2(const T& a, const T& b) 
+		{
 			return a < b ? a : b;
 		}
 
 		template <typename T>
-		static T max3(const T& a, const T& b, const T& c) {
+		static T max3(const T& a, const T& b, const T& c) 
+		{
 			return max2(a, max2(b, c));
 		}
 
 		/// Return the maximum of the three arguments.
 		template <typename T>
-		static T min3(const T& a, const T& b, const T& c) {
+		static T min3(const T& a, const T& b, const T& c) 
+		{
 			return min2(a, min2(b, c));
 		}
 
 		/// Clamp between two values.
 		template <typename T>
-		static T clamp(const T& x, const T& a, const T& b) {
+		static T clamp(const T& x, const T& a, const T& b) 
+		{
 			return Utils::min2(Utils::max2(x, a), b);
 		}
 
 		template <typename T>
-		static void swap(T& a, T& b) {
+		static void swap(T& a, T& b) 
+		{
 			T temp = a;
 			a = b;
 			b = temp;
@@ -320,21 +329,25 @@ namespace TheWorld_Utils
 			uint32_t u;
 		};
 
-		static bool isFinite(float f) {
+		static bool isFinite(float f) 
+		{
 			FloatUint32 fu;
 			fu.f = f;
 			return fu.u != 0x7F800000u && fu.u != 0x7F800001u;
 		}
 
-		static bool isNan(float f) {
+		static bool isNan(float f) 
+		{
 			return f != f;
 		}
 
-		static int ftoi_ceil(float val) {
+		static int ftoi_ceil(float val) 
+		{
 			return (int)ceilf(val);
 		}
 
-		static bool isZero(const float f, const float epsilon) {
+		static bool isZero(const float f, const float epsilon) 
+		{
 			return fabs(f) <= epsilon;
 		}
 
@@ -389,14 +402,23 @@ namespace TheWorld_Utils
 	template <typename F>
 	struct FinalAction {
 		FinalAction(F f) : final_{ f } {}
-		~FinalAction() { if (enabled_) final_(); }
-		void disable() { enabled_ = false; };
+		~FinalAction()
+		{
+			if (enabled_) final_(); 
+		}
+		void disable() 
+		{
+			enabled_ = false; 
+		};
 	private:
 		F final_;
 		bool enabled_{ true };
 	};
 
-	template <typename F> FinalAction<F> finally(F f) { return FinalAction<F>(f); }
+	template <typename F> FinalAction<F> finally(F f)
+	{
+		return FinalAction<F>(f); 
+	}
 
 	typedef std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds> MsTimePoint;
 
@@ -572,11 +594,26 @@ namespace TheWorld_Utils
 			return "Level=" + std::to_string(level) + "-X=" + std::to_string(x) + "-Z=" + std::to_string(z) + "-Altitude=" + std::to_string(y);
 		}
 
-		float altitude(void) { return y; }
-		float posX(void) { return x; }
-		float posZ(void) { return z; }
-		int lvl(void) { return level; }
-		void setAltitude(float a) { y = a; }
+		float altitude(void) 
+		{
+			return y; 
+		}
+		float posX(void) 
+		{
+			return x; 
+		}
+		float posZ(void)
+		{
+			return z; 
+		}
+		int lvl(void) 
+		{
+			return level; 
+		}
+		void setAltitude(float a)
+		{
+			y = a; 
+		}
 
 	private:
 		float x;

@@ -712,7 +712,8 @@ namespace TheWorld_Utils
 			m_should_terminate = true;
 		}
 		m_mutex_condition.notify_all();
-		for (std::thread& active_thread : m_threads) {
+		for (std::thread& active_thread : m_threads) 
+		{
 			active_thread.join();
 		}
 		m_threads.clear();
