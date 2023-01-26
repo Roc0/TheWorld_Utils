@@ -1,18 +1,58 @@
 //#include "pch.h"
-#ifdef _THEWORLD_CLIENT
-	#include <Godot.hpp>
-	#include <ResourceLoader.hpp>
-	#include <File.hpp>
-#endif
+
+//#define _THEWORLD_CLIENT
+
+//#ifdef _THEWORLD_CLIENT
+//	#include <Godot.hpp>
+//	#include <ResourceLoader.hpp>
+//	#include <File.hpp>
+//#endif
+#include <cstdio>
 #include "Utils.h"
+#include "Profiler.h"
+#include "half.h"
 #include <filesystem>
 #include <string>
 #include <plog/Initializers/RollingFileInitializer.h>
+#include <Eigen/Dense>
 
 namespace fs = std::filesystem;
 
 namespace TheWorld_Utils
 {
+	MemoryBuffer::MemoryBuffer(void)
+	{
+		m_ptr = nullptr;
+		m_len = 0;
+	}
+
+	void MemoryBuffer::set(BYTE* in, size_t len)
+	{
+		clear();
+
+		m_ptr = (BYTE*)calloc(1, len);
+		if (m_ptr == nullptr)
+			throw(std::exception((std::string(__FUNCTION__) + std::string("Allocation error")).c_str()));
+
+		memcpy(m_ptr, in, len);
+		m_len = len;
+	}
+
+	void MemoryBuffer::clear(void)
+	{
+		if (m_ptr != nullptr)
+		{
+			::free(m_ptr);
+			m_ptr = nullptr;
+			m_len = 0;
+		}
+	}
+	
+	MemoryBuffer::~MemoryBuffer(void)
+	{
+		clear();
+	}
+
 	void Utils::plogInit(plog::Severity sev, plog::IAppender* appender)
 	{
 		plog::init(sev, appender);
@@ -44,6 +84,10 @@ namespace TheWorld_Utils
 		m_lowerZGridVertex = 0;
 	}
 
+	MeshCacheBuffer::~MeshCacheBuffer(void)
+	{
+	}
+		
 	MeshCacheBuffer::MeshCacheBuffer(std::string cacheDir, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex)
 	{
 		m_gridStepInWU = gridStepInWU;
@@ -60,12 +104,12 @@ namespace TheWorld_Utils
 		std::string cacheFileName = "X-" + std::to_string(lowerXGridVertex) + "_Z-" + std::to_string(lowerZGridVertex) + ".mesh";
 		m_meshFilePath = m_cacheDir + "\\" + cacheFileName;
 
-#ifdef _THEWORLD_CLIENT
-		std::string heightmapFileName = "X-" + std::to_string(lowerXGridVertex) + "_Z-" + std::to_string(lowerZGridVertex) + "_heightmap.res";
-		m_heightmapFilePath = m_cacheDir + "\\" + heightmapFileName;
-		std::string normalmapFileName = "X-" + std::to_string(lowerXGridVertex) + "_Z-" + std::to_string(lowerZGridVertex) + "_normalmap.res";
-		m_normalmapFilePath = m_cacheDir + "\\" + normalmapFileName;
-#endif
+//#ifdef _THEWORLD_CLIENT
+//		std::string heightmapFileName = "X-" + std::to_string(lowerXGridVertex) + "_Z-" + std::to_string(lowerZGridVertex) + "_heightmap.res";
+//		m_heightmapFilePath = m_cacheDir + "\\" + heightmapFileName;
+//		std::string normalmapFileName = "X-" + std::to_string(lowerXGridVertex) + "_Z-" + std::to_string(lowerZGridVertex) + "_normalmap.res";
+//		m_normalmapFilePath = m_cacheDir + "\\" + normalmapFileName;
+//#endif
 	}
 	
 	MeshCacheBuffer::MeshCacheBuffer(const MeshCacheBuffer& c)
@@ -84,14 +128,16 @@ namespace TheWorld_Utils
 		m_lowerXGridVertex = c.m_lowerXGridVertex;
 		m_lowerZGridVertex = c.m_lowerZGridVertex;
 
-#ifdef _THEWORLD_CLIENT
-		m_heightmapFilePath = c.m_heightmapFilePath;
-		m_normalmapFilePath = c.m_normalmapFilePath;
-#endif
+//#ifdef _THEWORLD_CLIENT
+//		m_heightmapFilePath = c.m_heightmapFilePath;
+//		m_normalmapFilePath = c.m_normalmapFilePath;
+//#endif
 	}
 
 	std::string MeshCacheBuffer::getMeshIdFromMeshCache(void)
 	{
+		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+
 		if (!fs::exists(m_meshFilePath))
 			return "";
 		
@@ -110,11 +156,11 @@ namespace TheWorld_Utils
 		}
 
 		// get size of a size_t
-		size_t size_tSize;
-		TheWorld_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_tSize);
+		size_t size_t_size = sizeof(size_t);
+		//TheWorld_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_t_size);
 
 		// read the serialized size of the mesh id
-		if (fread(shortBuffer, size_tSize, 1, inFile) != 1)
+		if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
 		{
 			fclose(inFile);
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 2!").c_str()));
@@ -136,8 +182,11 @@ namespace TheWorld_Utils
 		return m_meshId;
 	}
 
-	void MeshCacheBuffer::refreshVerticesFromBuffer(std::string buffer, std::string& meshIdFromBuffer, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY)
+	void MeshCacheBuffer::refreshMapsFromBuffer(std::string buffer, std::string& meshIdFromBuffer, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer)
 	{
+		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+
+		//BYTE shortBuffer[256 + 1];
 		size_t size = 0;
 
 		const char* movingStreamBuffer = buffer.c_str();
@@ -156,102 +205,49 @@ namespace TheWorld_Utils
 		size_t vectSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
 		movingStreamBuffer += size;
 
-#ifdef _THEWORLD_CLIENT
-		godot::PoolRealArray* heigthsP = (godot::PoolRealArray*)heigths;
-		heigthsP->resize((int)vectSize);
-#endif
+		size_t uint16_t_size = sizeof(uint16_t);	// the size of an half ==> float_16
+		//TheWorld_Utils::serializeToByteStream<uint16_t>(0, shortBuffer, uint16_t_size);
 
-		vectGridVertices.clear();
-		vectGridVertices.resize((int)vectSize);
+		size_t float_size = sizeof(float);
 
-		bool first = true;
-		int idx = 0;
 		if (vectSize > 0)
 		{
-			while (movingStreamBuffer < endOfBuffer)
-			{
-				if (idx >= vectSize)
-					throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Length of buffer inconsistent, idx=" + std::to_string(idx) + " vectSize=" + std::to_string(vectSize)).c_str())); 
+			minAltitude = TheWorld_Utils::deserializeFromByteStream<float>((BYTE*)movingStreamBuffer, size);
+			movingStreamBuffer += size;
 
-				TheWorld_Utils::GridVertex v = TheWorld_Utils::GridVertex((BYTE*)movingStreamBuffer, size);
-				//vectGridVertices.push_back(v);
-				vectGridVertices[idx] = v;
-#ifdef _THEWORLD_CLIENT
-				heigthsP->set(idx, v.altitude());
-#endif
-				if (first)
-				{
-					minY = maxY = v.altitude();
-					first = false;
-				}
-				else
-				{
-					if (v.altitude() > maxY)
-						maxY = v.altitude();
-					if (v.altitude() < minY)
-						minY = v.altitude();
-				}
-				idx++;
-				movingStreamBuffer += size;
-			}
+			maxAltitude = TheWorld_Utils::deserializeFromByteStream<float>((BYTE*)movingStreamBuffer, size);
+			movingStreamBuffer += size;
 
-#ifdef _THEWORLD_CLIENT
-			{
-				// SUPERDEBUGRIC
-				//TheWorld_Utils::TimerMs clock("MeshCacheBuffer::refreshMeshCacheFromBuffer", m_meshId.c_str(), false, true);
-								
-				//clock.tick();
-				//godot::ResourceLoader* resLoader = godot::ResourceLoader::get_singleton();
-				//godot::Ref<godot::Image> image = resLoader->load("res://height.res");
-				//int res = (int)image->get_width();
-				//image->lock();
-				//for (int z = 0; z < res; z++)
-				//	for (int x = 0; x < res; x++)
-				//	{
-				//		godot::Color c = image->get_pixel(x, z);
-				//		TheWorld_Utils::GridVertex& v = vectGridVertices[z * res + x];
-				//		v.setAltitude(c.r * 3);
-				//	}
-				//image->unlock();
-				//clock.headerMsg("Mock Loop to replace altitudes" + m_meshId);
-				//clock.tock();
+			size_t float16HeightMapSize = vectSize * uint16_t_size;
+			//float16HeigthsBuffer = std::string((char*)movingStreamBuffer, float16HeightMapSize);
+			float16HeigthsBuffer.set((BYTE*)movingStreamBuffer, float16HeightMapSize);
+			movingStreamBuffer += float16HeightMapSize;
 
-				//clock.tick();
-				//setBufferForMeshCache(meshId, res, vectGridVertices, buffer);
-				//clock.headerMsg("Mock setBufferForMeshCache" + m_meshId);
-				//clock.tock();
-				// SUPERDEBUGRIC
-			}
-#endif
-			if (vectGridVertices.size() != vectSize)
-				throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Sequence error 4!").c_str()));
+			size_t float32HeightMapSize = vectSize * float_size;
+			//float32HeigthsBuffer = std::string((char*)movingStreamBuffer, float32HeightMapSize);
+			float32HeigthsBuffer.set((BYTE*)movingStreamBuffer, float32HeightMapSize);
+			movingStreamBuffer += float32HeightMapSize;
 
-			FILE* outFile = nullptr;
-			errno_t err = fopen_s(&outFile, m_meshFilePath.c_str(), "wb");
-			if (err != 0)
-			{
-				throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Open " + m_meshFilePath + " in errore - Err=" + std::to_string(err)).c_str()));
-			}
+			size_t normalMapSize = vectSize * sizeof(struct TheWorld_Utils::_RGB);
+			//normalsBuffer = std::string((char*)movingStreamBuffer, normalMapSize);
+			normalsBuffer.set((BYTE*)movingStreamBuffer, normalMapSize);
+			movingStreamBuffer += normalMapSize;
 
-			if (fwrite(buffer.c_str(), buffer.size(), 1, outFile) != 1)
-			{
-				fclose(outFile);
-				throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Write error 3!").c_str()));
-			}
-
-			fclose(outFile);
-
-#ifdef _THEWORLD_CLIENT
-			if (fs::exists(m_heightmapFilePath))
-				fs::remove(m_heightmapFilePath);
-			if (fs::exists(m_normalmapFilePath))
-				fs::remove(m_normalmapFilePath);
-#endif
+			writeBufferToMeshCache(buffer);
+		}
+		else
+		{
+			minAltitude = maxAltitude = 0;
+			float16HeigthsBuffer.clear();
+			float32HeigthsBuffer.clear();
+			normalsBuffer.clear();
 		}
 	}
 
 	void MeshCacheBuffer::readBufferFromMeshCache(std::string _meshId, std::string& buffer, size_t& vectSizeFromCache)
 	{
+		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+
 		BYTE shortBuffer[256 + 1];
 		size_t size;
 
@@ -270,12 +266,14 @@ namespace TheWorld_Utils
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 1!").c_str()));
 		}
 
-		// get size of a size_t
-		size_t size_tSize;
-		TheWorld_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_tSize);
+		size_t size_t_size = sizeof(size_t);	// get size of a size_t
+		//TheWorld_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_t_size);
+		size_t uint16_t_size = sizeof(uint16_t);	// the size of an half ==> float_16
+		//TheWorld_Utils::serializeToByteStream<uint16_t>(0, shortBuffer, uint16_t_size);
+		size_t float_size = sizeof(float);
 
 		// read the serialized size of the mesh id
-		if (fread(shortBuffer, size_tSize, 1, inFile) != 1)
+		if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
 		{
 			fclose(inFile);
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 2!").c_str()));
@@ -300,8 +298,8 @@ namespace TheWorld_Utils
 
 		m_meshId = meshId;
 
-		// read the serialized size of the vector of GridVertex
-		if (fread(shortBuffer, size_tSize, 1, inFile) != 1)
+		// read the serialized size of the vector of heigths
+		if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
 		{
 			fclose(inFile);
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 4!").c_str()));
@@ -309,13 +307,11 @@ namespace TheWorld_Utils
 		// and deserialize it
 		vectSizeFromCache = TheWorld_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
 
-		// Serialize an empty GridVertex only to obtain the size of a serialized GridVertex
-		size_t serializedVertexSize = 0;
-		TheWorld_Utils::GridVertex v;
-		v.serialize(shortBuffer, serializedVertexSize);
-
 		// alloc buffer to contain the serialized entire vector of GridVertex
-		size_t streamBufferSize = 1 /* "0" */ + size_tSize + meshId.length() + size_tSize /* the size of a size_t */ + vectSizeFromCache * serializedVertexSize;
+		size_t float16HeightmapSize = vectSizeFromCache * uint16_t_size;
+		size_t float32HeightmapSize = vectSizeFromCache * float_size;
+		size_t normalmapSize = vectSizeFromCache * sizeof(struct _RGB);
+		size_t streamBufferSize = 1 /* "0" */ + size_t_size + meshId.length() + size_t_size /* numheigths */ + float_size /*min_altitude*/ + float_size /*max_altitude*/ + float16HeightmapSize + float32HeightmapSize + normalmapSize;
 		BYTE* streamBuffer = (BYTE*)calloc(1, streamBufferSize);
 		if (streamBuffer == nullptr)
 		{
@@ -337,17 +333,26 @@ namespace TheWorld_Utils
 		fclose(inFile);
 
 		buffer = std::string((char*)streamBuffer, streamBufferSize);
+		buffer.clear();
+		buffer.reserve(streamBufferSize);
+		buffer.append((char*)streamBuffer, streamBufferSize);
 
 		::free(streamBuffer);
 	}
 		
-	void MeshCacheBuffer::readVerticesFromMeshCache(std::string _meshId, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY)
+	void MeshCacheBuffer::readMapsFromMeshCache(std::string _meshId, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer)
 	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+
+		//BYTE shortBuffer[256 + 1];
 		std::string buffer;
 		size_t vectSizeFromCache;
 		size_t size;
 		
-		readBufferFromMeshCache(_meshId, buffer, vectSizeFromCache);
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "readBufferFromMeshCache");
+			readBufferFromMeshCache(_meshId, buffer, vectSizeFromCache);
+		}
 
 		BYTE* movingStreamBuffer = (BYTE *)buffer.c_str();
 		BYTE* endOfBuffer = (BYTE*)movingStreamBuffer + buffer.size();
@@ -371,51 +376,56 @@ namespace TheWorld_Utils
 		//size_t heightsArraySize = (m_numVerticesPerSize * m_gridStepInWU) * (m_numVerticesPerSize * m_gridStepInWU);
 		movingStreamBuffer += size;
 		
-#ifdef _THEWORLD_CLIENT
-		godot::PoolRealArray* heigthsP = (godot::PoolRealArray*)heigths;
-		heigthsP->resize((int)vectSize);
-#endif
+		if (vectSize == 0)
+			throw(GDN_TheWorld_Exception(__FUNCTION__, "Cache does not contain heigthmap/normlmap"));
 
-		vectGridVertices.clear();
-		vectGridVertices.resize((int)vectSize);
+		size_t uint16_t_size = sizeof(uint16_t);	// the size of an half ==> float_16
+		//TheWorld_Utils::serializeToByteStream<uint16_t>(0, shortBuffer, uint16_t_size);
+		size_t float_size = sizeof(float);
 
-		bool first = true;
-		int idx = 0;
-		while (movingStreamBuffer < endOfBuffer)
+		minAltitude = TheWorld_Utils::deserializeFromByteStream<float>((BYTE*)movingStreamBuffer, size);
+		movingStreamBuffer += size;
+
+		maxAltitude = TheWorld_Utils::deserializeFromByteStream<float>((BYTE*)movingStreamBuffer, size);
+		movingStreamBuffer += size;
+
 		{
-			if (idx >= vectSize)
-				throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Length of buffer inconsistent, idx=" + std::to_string(idx) + " vectSize=" + std::to_string(vectSize)).c_str())); 
+			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "copy output maps");
 
-			TheWorld_Utils::GridVertex v = TheWorld_Utils::GridVertex((BYTE*)movingStreamBuffer, size);
-			//vectGridVertices.push_back(v);
-			vectGridVertices[idx] = v;
-#ifdef _THEWORLD_CLIENT
-			heigthsP->set(idx, v.altitude());
-#endif
-			if (first)
-			{
-				minY = maxY = v.altitude();
-				first = false;
-			}
-			else
-			{
-				if (v.altitude() > maxY)
-					maxY = v.altitude();
-				if (v.altitude() < minY)
-					minY = v.altitude();
-			}
-			idx++;
-			movingStreamBuffer += size;
+			size_t float16HeightMapSize = vectSize * uint16_t_size;
+			////float16HeigthsBuffer = std::string((char*)movingStreamBuffer, float16HeightMapSize);
+			//float16HeigthsBuffer.clear();
+			//float16HeigthsBuffer.reserve(float16HeightMapSize);
+			//float16HeigthsBuffer.append((char*)movingStreamBuffer, float16HeightMapSize);
+			float16HeigthsBuffer.set(movingStreamBuffer, float16HeightMapSize);
+			movingStreamBuffer += float16HeightMapSize;
+
+			size_t float32HeightMapSize = vectSize * float_size;
+			////float32HeigthsBuffer = std::string((char*)movingStreamBuffer, float32HeightMapSize);
+			//float32HeigthsBuffer.clear();
+			//float32HeigthsBuffer.reserve(float32HeightMapSize);
+			//float32HeigthsBuffer.append((char*)movingStreamBuffer, float32HeightMapSize);
+			float32HeigthsBuffer.set(movingStreamBuffer, float32HeightMapSize);
+			movingStreamBuffer += float32HeightMapSize;
+
+			size_t normalMapSize = vectSize * sizeof(struct TheWorld_Utils::_RGB);
+			////normalsBuffer = std::string((char*)movingStreamBuffer, normalMapSize);
+			//normalsBuffer.clear();
+			//normalsBuffer.reserve(normalMapSize);
+			//normalsBuffer.append((char*)movingStreamBuffer, normalMapSize);
+			normalsBuffer.set(movingStreamBuffer, normalMapSize);
+			movingStreamBuffer += normalMapSize;
 		}
-
-		if (vectGridVertices.size() != vectSizeFromCache || vectGridVertices.size() != vectSize)
-			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Sequence error 4!").c_str()));
 	}
 
 	void MeshCacheBuffer::writeBufferToMeshCache(std::string buffer)
 	{
+		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+
+		std::string tempPath = m_meshFilePath + ".tmp";
+		
 		FILE* outFile = nullptr;
-		errno_t err = fopen_s(&outFile, m_meshFilePath.c_str(), "wb");
+		errno_t err = fopen_s(&outFile, tempPath.c_str(), "wb");
 		if (err != 0)
 		{
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Open " + m_meshFilePath + " in errore - Err=" + std::to_string(err)).c_str()));
@@ -429,35 +439,65 @@ namespace TheWorld_Utils
 
 		fclose(outFile);
 
-#ifdef _THEWORLD_CLIENT
-		if (fs::exists(m_heightmapFilePath))
-			fs::remove(m_heightmapFilePath);
-		if (fs::exists(m_normalmapFilePath))
-			fs::remove(m_normalmapFilePath);
-#endif
+		if (fs::exists(m_meshFilePath.c_str()))
+			if (remove(m_meshFilePath.c_str()) != 0)
+				throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Remove error!").c_str()));
+
+		if (rename(tempPath.c_str(), m_meshFilePath.c_str()) != 0)
+			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Rename error!").c_str()));
 	}
 		
-	void MeshCacheBuffer::setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, std::string& buffer)
+	void MeshCacheBuffer::setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, std::string& buffer)
 	{
-		BYTE shortBuffer[256 + 1];
+		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+
+		//BYTE shortBuffer[256 + 1];
 
 		// get size of a size_t
-		size_t size_tSize;
-		TheWorld_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_tSize);
+		size_t size_t_size = sizeof(size_t);
+		//TheWorld_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_t_size);
+		size_t uint16_t_size = sizeof(uint16_t);	// the size of an half ==> float_16
+		//TheWorld_Utils::serializeToByteStream<uint16_t>(0, shortBuffer, uint16_t_size);
+		size_t float_size = sizeof(float);
 
-		// Serialize an empty GridVertex only to obtain the size of a serialized GridVertex
-		size_t serializedVertexSize = 0;
-		TheWorld_Utils::GridVertex v;
-		v.serialize(shortBuffer, serializedVertexSize);
-
-		size_t vectSize = vectGridVertices.size();
-		size_t streamBufferSize = 1 /* "0" */ + size_tSize + meshId.length() + size_tSize /* the size of a size_t */ + vectSize * serializedVertexSize;
+		size_t vectSize = vectGridHeights.size();
+		size_t float16HeightmapSize = vectSize * uint16_t_size;
+		size_t float32HeightmapSize = vectSize * float_size;
+		size_t normalmapSize = vectSize * sizeof(struct _RGB);
+		size_t streamBufferSize = 1 /* "0" */ + size_t_size + meshId.length() + size_t_size /* numheigths */ + float_size /*min_altitude*/ + float_size /*max_altitude*/ + float16HeightmapSize + float32HeightmapSize + normalmapSize;
 
 		BYTE* streamBuffer = (BYTE*)calloc(1, streamBufferSize);
 		if (streamBuffer == nullptr)
 			throw(std::exception((std::string(__FUNCTION__) + std::string("Allocation error")).c_str()));
-
 		size_t streamBufferIterator = 0;
+
+		BYTE* tempFloat16HeithmapBuffer = (BYTE*)calloc(1, float16HeightmapSize);
+		if (tempFloat16HeithmapBuffer == nullptr)
+		{
+			free(streamBuffer);
+			throw(std::exception((std::string(__FUNCTION__) + std::string("Allocation error")).c_str()));
+		}
+		size_t tempFloat16HeithmapBufferIterator = 0;
+
+		BYTE* tempFloat32HeithmapBuffer = (BYTE*)calloc(1, float32HeightmapSize);
+		if (tempFloat32HeithmapBuffer == nullptr)
+		{
+			free(streamBuffer);
+			free(tempFloat16HeithmapBuffer);
+			throw(std::exception((std::string(__FUNCTION__) + std::string("Allocation error")).c_str()));
+		}
+		size_t tempFloat32HeithmapBufferIterator = 0;
+
+		BYTE* tempNormalmapBuffer = (BYTE*)calloc(1, normalmapSize);
+		if (tempNormalmapBuffer == nullptr)
+		{
+			free(streamBuffer);
+			free(tempFloat16HeithmapBuffer);
+			free(tempFloat32HeithmapBuffer);
+			throw(std::exception((std::string(__FUNCTION__) + std::string("Allocation error")).c_str()));
+		}
+		size_t tempNormalmapBufferIterator = 0;
+
 		memcpy(streamBuffer + streamBufferIterator, "0", 1);
 		streamBufferIterator++;
 
@@ -472,139 +512,220 @@ namespace TheWorld_Utils
 		TheWorld_Utils::serializeToByteStream<size_t>(vectSize, streamBuffer + streamBufferIterator, size);
 		streamBufferIterator += size;
 
+		float minAltitude = 0, maxAltitude = 0;
+		bool first = true;
+		size_t idx = 0;
 		if (vectSize != 0)
+		{
 			for (int z = 0; z < numVerticesPerSize; z++)			// m_heightMapImage->get_height()
+			{
 				for (int x = 0; x < numVerticesPerSize; x++)		// m_heightMapImage->get_width()
 				{
-					TheWorld_Utils::GridVertex& v = vectGridVertices[z * numVerticesPerSize + x];
-					v.serialize(streamBuffer + streamBufferIterator, size);
-					streamBufferIterator += size;
+					// supposing heigths are ordered line by line
+					TheWorld_Utils::FLOAT_32 f;
+					f.f32 = vectGridHeights[idx];
+					
+					TheWorld_Utils::serializeToByteStream<uint16_t>(half_from_float(f.u32), tempFloat16HeithmapBuffer + tempFloat16HeithmapBufferIterator, size);
+					tempFloat16HeithmapBufferIterator += size;
+
+					TheWorld_Utils::serializeToByteStream<float>(f.f32, tempFloat32HeithmapBuffer + tempFloat32HeithmapBufferIterator, size);
+					tempFloat32HeithmapBufferIterator += size;
+
+					if (first)
+					{
+						first = false;
+						minAltitude = maxAltitude = f.f32;
+					}
+					else
+					{
+						if (f.f32 > maxAltitude)
+							maxAltitude = f.f32;
+						if (f.f32 < minAltitude)
+							minAltitude = f.f32;
+					}
+
+					{
+						// h = height of the point for which we are computing the normal
+						// hr = height of the point on the rigth
+						// hl = height of the point on the left
+						// hf = height of the forward point (z growing)
+						// hb = height of the backward point (z lessening)
+						// step = step in WUs between points
+						// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
+						// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
+						Eigen::Vector3d normal;
+						//Eigen::Vector3d P((float)x, h, (float)z);	// Verify
+						if (x < numVerticesPerSize - 1 && z < numVerticesPerSize - 1)
+						{
+							float hr = vectGridHeights[z * numVerticesPerSize + x + 1];
+							float hf = vectGridHeights[(z + 1) * numVerticesPerSize + x];
+							normal = Eigen::Vector3d(f.f32 - hr, gridStepInWU, f.f32 - hf).normalized();
+							//{		// Verify
+							//	Eigen::Vector3d PR((float)(x + gridStepInWU), hr, (float)z);
+							//	Eigen::Vector3d PF((float)x, hf, (float)(z + gridStepInWU));
+							//	Eigen::Vector3d normal1 = (PF - P).cross(PR - P).normalized();
+							//	if (!equal(normal1, normal))	// DEBUGRIC
+							//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+							//}
+						}
+						else
+						{
+							if (x == numVerticesPerSize - 1 && z == 0)
+							{
+								float hf = vectGridHeights[(z + 1) * numVerticesPerSize + x];
+								float hl = vectGridHeights[z * numVerticesPerSize + x - 1];
+								normal = Eigen::Vector3d(hl - f.f32, gridStepInWU, f.f32 - hf).normalized();
+								//{		// Verify
+								//	Eigen::Vector3d PL((float)(x - gridStepInWU), hl, (float)z);
+								//	Eigen::Vector3d PF((float)x, hf, (float)(z + gridStepInWU));
+								//	Eigen::Vector3d normal1 = (PL - P).cross(PF - P).normalized();
+								//	if (!equal(normal1, normal))	// DEBUGRIC
+								//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+								//}
+							}
+							else if (x == 0 && z == numVerticesPerSize - 1)
+							{
+								float hr = vectGridHeights[z * numVerticesPerSize + x + 1];
+								float hb = vectGridHeights[(z - 1) * numVerticesPerSize + x];
+								normal = Eigen::Vector3d(f.f32 - hr, gridStepInWU, hb - f.f32).normalized();
+								//{		// Verify
+								//	Eigen::Vector3d PR((float)(x + gridStepInWU), hr, (float)z);
+								//	Eigen::Vector3d PB((float)(x), hb, (float)(z - gridStepInWU));
+								//	Eigen::Vector3d normal1 = (PR - P).cross(PB - P).normalized();
+								//	if (!equal(normal1, normal))	// DEBUGRIC
+								//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+								//}
+							}
+							else
+							{
+								float hl = vectGridHeights[z * numVerticesPerSize + x - 1];
+								float hb = vectGridHeights[(z - 1) * numVerticesPerSize + x];
+								normal = Eigen::Vector3d(hl - f.f32, gridStepInWU, hb - f.f32).normalized();
+								//{		// Verify
+								//	Eigen::Vector3d PB((float)x, hb, (float)(z - gridStepInWU));
+								//	Eigen::Vector3d PL((float)(x - gridStepInWU), hl, (float)z);
+								//	Eigen::Vector3d normal1 = (PB - P).cross(PL - P).normalized();
+								//	if (!equal(normal1, normal))	// DEBUGRIC
+								//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+								//}
+							}
+						}
+						//Color ShaderTerrainData::encodeNormal(Vector3 normal)
+						//{
+						//	normal = 0.5 * (normal + Vector3::ONE);
+						//	return Color(normal.x, normal.z, normal.y);
+						//}
+						normal = 0.5 * (normal + Eigen::Vector3d(1, 1, 1));
+						struct _RGB rgb;
+						rgb.r = (BYTE)(normal.x() * 255);	// normals coord are from 0 to 1 but if expressed as color in a normlamap are from 0 to 255
+						rgb.g = (BYTE)(normal.z() * 255);
+						rgb.b = (BYTE)(normal.y() * 255);
+						TheWorld_Utils::serializeToByteStream<struct _RGB>(rgb, tempNormalmapBuffer + tempNormalmapBufferIterator, size);
+						tempNormalmapBufferIterator += size;
+					}
+
+					idx++;
 				}
+			}
+
+			TheWorld_Utils::serializeToByteStream<float>(minAltitude, streamBuffer + streamBufferIterator, size);
+			streamBufferIterator += size;
+
+			TheWorld_Utils::serializeToByteStream<float>(maxAltitude, streamBuffer + streamBufferIterator, size);
+			streamBufferIterator += size;
+
+			assert(float16HeightmapSize == tempFloat16HeithmapBufferIterator);
+			memcpy(streamBuffer + streamBufferIterator, tempFloat16HeithmapBuffer, float16HeightmapSize);	// append normal map
+			streamBufferIterator += float16HeightmapSize;
+
+			assert(float32HeightmapSize == tempFloat32HeithmapBufferIterator);
+			memcpy(streamBuffer + streamBufferIterator, tempFloat32HeithmapBuffer, float32HeightmapSize);	// append normal map
+			streamBufferIterator += float32HeightmapSize;
+
+			assert(normalmapSize == tempNormalmapBufferIterator);
+			memcpy(streamBuffer + streamBufferIterator, tempNormalmapBuffer, normalmapSize);	// append normal map
+			streamBufferIterator += normalmapSize;
+
+			assert(streamBufferSize == streamBufferIterator);
+		}
 
 		buffer = std::string((char*)streamBuffer, streamBufferIterator);
 
+		free(tempFloat16HeithmapBuffer);
+		free(tempFloat32HeithmapBuffer);
+		free(tempNormalmapBuffer);
 		free(streamBuffer);
 
 		m_meshId = meshId;
 	}
 
-#ifdef _THEWORLD_CLIENT
-
-	void MeshCacheBuffer::writeImage(godot::Ref<godot::Image> image, enum class ImageType type)
-	{
-		std::string _fileName;
-		if (type == ImageType::heightmap)
-			_fileName = m_heightmapFilePath;
-		else if (type == ImageType::normalmap)
-			_fileName = m_normalmapFilePath;
-		else
-			throw(std::exception((std::string(__FUNCTION__) + std::string("Unknown image type (") + std::to_string((int)type) + ")").c_str()));
-		godot::String fileName = _fileName.c_str();
-
-		int64_t w = image->get_width();
-		int64_t h = image->get_height();
-		godot::Image::Format f = image->get_format();
-		godot::PoolByteArray data = image->get_data();
-		int64_t size = data.size();
-		godot::File* file = godot::File::_new();
-		godot::Error err = file->open(fileName, godot::File::WRITE);
-		if (err != godot::Error::OK)
-			throw(std::exception((std::string(__FUNCTION__) + std::string("file->open error (") + std::to_string((int)err) + ") : " + _fileName).c_str()));
-		file->store_64(w);
-		file->store_64(h);
-		file->store_64((int64_t)f);
-		file->store_64(size);
-		file->store_buffer(data);
-		file->close();
-	}
-
-	godot::Ref<godot::Image> MeshCacheBuffer::readImage(bool& ok, enum class ImageType type)
-	{
-		std::string _fileName;
-		if (type == ImageType::heightmap)
-			_fileName = m_heightmapFilePath;
-		else if (type == ImageType::normalmap)
-			_fileName = m_normalmapFilePath;
-		else
-			throw(std::exception((std::string(__FUNCTION__) + std::string("Unknown image type (") + std::to_string((int)type) + ")").c_str()));
-		godot::String fileName = _fileName.c_str();
-
-		if (!fs::exists(_fileName))
-		{
-			ok = false;
-			return nullptr;
-		}
-
-		godot::File* file = godot::File::_new();
-		godot::Error err = file->open(fileName, godot::File::READ);
-		if (err != godot::Error::OK)
-			throw(std::exception((std::string(__FUNCTION__) + std::string("file->open error (") + std::to_string((int)err) + ") : " + _fileName).c_str()));
-		int64_t w = file->get_64();
-		int64_t h = file->get_64();
-		godot::Image::Format f = (godot::Image::Format)file->get_64();
-		int64_t size = file->get_64();
-		godot::PoolByteArray data = file->get_buffer(size);
-		file->close();
-
-		godot::Ref<godot::Image> image = godot::Image::_new();
-		image->create_from_data(w, h, false, f, data);
-
-		ok = true;
-
-		return image;
-	}
-		
-	//void MeshCacheBuffer::writeHeightmap(godot::Ref<godot::Image> heightMapImage)
-	//{
-	//	godot::Error err = heightMapImage->save_png(godot::String(m_heightmapFilePath.c_str()));
-	//	if (err != godot::Error::OK)
-	//		throw(std::exception((std::string(__FUNCTION__) + std::string("save_png heightmap error") + std::to_string((int)err)).c_str()));
-	//}
-
-	//void MeshCacheBuffer::writeNormalmap(godot::Ref<godot::Image> normalMapImage)
-	//{
-	//	godot::Error err = normalMapImage->save_png(godot::String(m_normalmapFilePath.c_str()));
-	//	if (err != godot::Error::OK)
-	//		throw(std::exception((std::string(__FUNCTION__) + std::string("save_png normalmap error") + std::to_string((int)err)).c_str()));
-	//}
-
-	//godot::Ref<godot::Image> MeshCacheBuffer::readHeigthmap(bool& ok)
-	//{
-	//	ok = true;
-
-	//	if (!fs::exists(m_heightmapFilePath))
-	//	{
-	//		ok = false;
-	//		return nullptr;
-	//	}
-
-	//	godot::Ref<godot::Image> heightMapImage = godot::Image::_new();
-	//	godot::Error err = heightMapImage->load(godot::String(m_heightmapFilePath.c_str()));
-	//	if (err != godot::Error::OK)
-	//		throw(std::exception((std::string(__FUNCTION__) + std::string("load heightmap error") + std::to_string((int)err)).c_str()));
-
-	//	return heightMapImage;
-	//}
-
-	//godot::Ref<godot::Image> MeshCacheBuffer::readNormalmap(bool& ok)
-	//{
-	//	ok = true;
-
-	//	if (!fs::exists(m_normalmapFilePath))
-	//	{
-	//		ok = false;
-	//		return nullptr;
-	//	}
-
-	//	godot::Ref<godot::Image> normalMapImage = godot::Image::_new();
-	//	godot::Error err = normalMapImage->load(godot::String(m_normalmapFilePath.c_str()));
-	//	if (err != godot::Error::OK)
-	//		throw(std::exception((std::string(__FUNCTION__) + std::string("load normalmap error") + std::to_string((int)err)).c_str()));
-
-	//	return normalMapImage;
-	//}
-
-#endif
+//#ifdef _THEWORLD_CLIENT
+//
+//	void MeshCacheBuffer::writeImage(godot::Ref<godot::Image> image, enum class ImageType type)
+//	{
+//		std::string _fileName;
+//		if (type == ImageType::heightmap)
+//			_fileName = m_heightmapFilePath;
+//		else if (type == ImageType::normalmap)
+//			_fileName = m_normalmapFilePath;
+//		else
+//			throw(std::exception((std::string(__FUNCTION__) + std::string("Unknown image type (") + std::to_string((int)type) + ")").c_str()));
+//		godot::String fileName = _fileName.c_str();
+//
+//		int64_t w = image->get_width();
+//		int64_t h = image->get_height();
+//		godot::Image::Format f = image->get_format();
+//		godot::PoolByteArray data = image->get_data();
+//		int64_t size = data.size();
+//		godot::File* file = godot::File::_new();
+//		godot::Error err = file->open(fileName, godot::File::WRITE);
+//		if (err != godot::Error::OK)
+//			throw(std::exception((std::string(__FUNCTION__) + std::string("file->open error (") + std::to_string((int)err) + ") : " + _fileName).c_str()));
+//		file->store_64(w);
+//		file->store_64(h);
+//		file->store_64((int64_t)f);
+//		file->store_64(size);
+//		file->store_buffer(data);
+//		file->close();
+//	}
+//
+//	godot::Ref<godot::Image> MeshCacheBuffer::readImage(bool& ok, enum class ImageType type)
+//	{
+//		std::string _fileName;
+//		if (type == ImageType::heightmap)
+//			_fileName = m_heightmapFilePath;
+//		else if (type == ImageType::normalmap)
+//			_fileName = m_normalmapFilePath;
+//		else
+//			throw(std::exception((std::string(__FUNCTION__) + std::string("Unknown image type (") + std::to_string((int)type) + ")").c_str()));
+//		godot::String fileName = _fileName.c_str();
+//
+//		if (!fs::exists(_fileName))
+//		{
+//			ok = false;
+//			return nullptr;
+//		}
+//
+//		godot::File* file = godot::File::_new();
+//		godot::Error err = file->open(fileName, godot::File::READ);
+//		if (err != godot::Error::OK)
+//			throw(std::exception((std::string(__FUNCTION__) + std::string("file->open error (") + std::to_string((int)err) + ") : " + _fileName).c_str()));
+//		int64_t w = file->get_64();
+//		int64_t h = file->get_64();
+//		godot::Image::Format f = (godot::Image::Format)file->get_64();
+//		int64_t size = file->get_64();
+//		godot::PoolByteArray data = file->get_buffer(size);
+//		file->close();
+//
+//		godot::Ref<godot::Image> image = godot::Image::_new();
+//		image->create_from_data(w, h, false, f, data);
+//
+//		ok = true;
+//
+//		return image;
+//	}
+//		
+//#endif
 
 	void ThreadPool::Start(std::string label, size_t num_threads, /*const std::function<void()>* threadInitFunction, const std::function<void()>* threadDeinitFunction,*/ ThreadInitDeinit* threadInitDeinit)
 	{

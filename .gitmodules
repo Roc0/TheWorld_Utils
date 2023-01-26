@@ -1,3 +1,7 @@
 [submodule "plog"]
 	path = plog
 	url = https://github.com/SergiusTheBest/plog.git
+[submodule "godot-cpp"]
+	path = godot-cpp
+	url = https://github.com/godotengine/godot-cpp
+	branch = 3.5

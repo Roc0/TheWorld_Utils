@@ -1,10 +1,10 @@
 #pragma once
 
-#ifdef _THEWORLD_CLIENT
-	#include <Godot.hpp>
-	#include <ImageTexture.hpp>
-	#include <PoolArrays.hpp>
-#endif
+//#ifdef _THEWORLD_CLIENT
+//	#include <Godot.hpp>
+//	#include <ImageTexture.hpp>
+//	#include <PoolArrays.hpp>
+//#endif
 
 #include "framework.h"
 #include <cfloat>
@@ -33,11 +33,56 @@
 
 namespace TheWorld_Utils
 {
+	// https://cellperformance.beyond3d.com/articles/2006/07/branchfree_implementation_of_h_1.html
+
+	typedef union FLOAT_32 FLOAT_32;
+	union FLOAT_32
+	{
+		float    f32;
+		uint32_t u32;
+	};
+
+	struct _RGB
+	{
+		BYTE r;
+		BYTE g;
+		BYTE b;
+	};
+
 	static constexpr float kPi = 3.14159265358979323846f;
 	static constexpr float kPi2 = 6.28318530717958647692f;
 	static constexpr float kEpsilon = 0.0001f;
 	static constexpr float kAreaEpsilon = FLT_EPSILON;
 	static constexpr float kNormalEpsilon = 0.001f;
+
+	class MemoryBuffer
+	{
+	public:
+		__declspec(dllexport) MemoryBuffer(void);
+		__declspec(dllexport) ~MemoryBuffer(void);
+		__declspec(dllexport) void set(BYTE* in, size_t len);
+		__declspec(dllexport) BYTE* ptr()
+		{
+			return m_ptr;
+		}
+		__declspec(dllexport) size_t len(void)
+		{
+			return m_len;
+		}
+		__declspec(dllexport) bool empty(void)
+		{
+			return m_ptr == nullptr;
+		}
+
+		__declspec(dllexport) void clear(void);
+
+	private:
+		MemoryBuffer(const MemoryBuffer&);
+		void operator=(const MemoryBuffer&);
+
+		BYTE* m_ptr;
+		size_t m_len;
+	};
 
 	template <class TimeT = std::chrono::milliseconds, class ClockT = std::chrono::steady_clock> class Timer
 	{
@@ -147,42 +192,43 @@ namespace TheWorld_Utils
 	class MeshCacheBuffer
 	{
 	public:
-		MeshCacheBuffer(void);
-		MeshCacheBuffer(std::string cacheDir, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex);
-		MeshCacheBuffer(const MeshCacheBuffer& c);
+		__declspec(dllexport) MeshCacheBuffer(void);
+		__declspec(dllexport) ~MeshCacheBuffer(void);
+		__declspec(dllexport) MeshCacheBuffer(std::string cacheDir, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex);
+		__declspec(dllexport) MeshCacheBuffer(const MeshCacheBuffer& c);
 
-		void operator=(const MeshCacheBuffer& c);
+		__declspec(dllexport) void operator=(const MeshCacheBuffer& c);
 
-		std::string getMeshIdFromMeshCache(void);
-		void refreshVerticesFromBuffer(std::string buffer, std::string& meshIdFromBuffer, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY);
-		void readBufferFromMeshCache(std::string meshId, std::string& buffer, size_t& vectSizeFromCache);
-		void readVerticesFromMeshCache(std::string meshId, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY);
-		void writeBufferToMeshCache(std::string buffer);
-		void setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, std::string& buffer);
-		//std::string getCacheDir()
+		__declspec(dllexport) std::string getMeshIdFromMeshCache(void);
+		__declspec(dllexport) void refreshMapsFromBuffer(std::string buffer, std::string& meshIdFromBuffer, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer);
+		__declspec(dllexport) void readBufferFromMeshCache(std::string meshId, std::string& buffer, size_t& vectSizeFromCache);
+		__declspec(dllexport) void readMapsFromMeshCache(std::string meshId, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer);
+		__declspec(dllexport) void writeBufferToMeshCache(std::string buffer);
+		__declspec(dllexport) void setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, std::string& buffer);
+		//__declspec(dllexport) std::string getCacheDir()
 		//{
 		//	return m_cacheDir;
 		//}
 
-		std::string getMeshId()
+		__declspec(dllexport) std::string getMeshId()
 		{
 			return m_meshId;
 		}
 
-#ifdef _THEWORLD_CLIENT
-		//void writeHeightmap(godot::Ref<godot::Image> heightMapImage);
-		//void writeNormalmap(godot::Ref<godot::Image> normalMapImage);
-		//godot::Ref<godot::Image> readHeigthmap(bool& ok);
-		//godot::Ref<godot::Image> readNormalmap(bool& ok);
-		enum class ImageType
-		{
-			heightmap = 0,
-			normalmap = 1
-		};
-
-		void writeImage(godot::Ref<godot::Image> image, enum class ImageType type);
-		godot::Ref<godot::Image> readImage(bool& ok, enum class ImageType type);
-#endif
+//#ifdef _THEWORLD_CLIENT
+//		//void writeHeightmap(godot::Ref<godot::Image> heightMapImage);
+//		//void writeNormalmap(godot::Ref<godot::Image> normalMapImage);
+//		//godot::Ref<godot::Image> readHeigthmap(bool& ok);
+//		//godot::Ref<godot::Image> readNormalmap(bool& ok);
+//		enum class ImageType
+//		{
+//			heightmap = 0,
+//			normalmap = 1
+//		};
+//
+//		__declspec(dllexport) void writeImage(godot::Ref<godot::Image> image, enum class ImageType type);
+//		__declspec(dllexport) godot::Ref<godot::Image> readImage(bool& ok, enum class ImageType type);
+//#endif
 
 	private:
 		std::string m_meshFilePath;
@@ -194,10 +240,10 @@ namespace TheWorld_Utils
 		float m_lowerXGridVertex;
 		float m_lowerZGridVertex;
 
-#ifdef _THEWORLD_CLIENT
-		std::string m_heightmapFilePath;
-		std::string m_normalmapFilePath;
-#endif
+//#ifdef _THEWORLD_CLIENT
+//		std::string m_heightmapFilePath;
+//		std::string m_normalmapFilePath;
+//#endif
 	};
 	
 	std::string ToString(GUID* guid);
