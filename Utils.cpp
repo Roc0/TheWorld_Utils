@@ -24,18 +24,48 @@ namespace TheWorld_Utils
 	{
 		m_ptr = nullptr;
 		m_len = 0;
+		m_bufferLen = 0;
+	}
+
+	MemoryBuffer::~MemoryBuffer(void)
+	{
+		clear();
 	}
 
 	void MemoryBuffer::set(BYTE* in, size_t len)
 	{
-		clear();
-
-		m_ptr = (BYTE*)calloc(1, len);
-		if (m_ptr == nullptr)
-			throw(std::exception((std::string(__FUNCTION__) + std::string("Allocation error")).c_str()));
-
+		reserve(len);
 		memcpy(m_ptr, in, len);
 		m_len = len;
+	}
+
+	void MemoryBuffer::append(BYTE* in, size_t len)
+	{
+		size_t newLen = m_len + len;
+		reserve(newLen);
+		memcpy(m_ptr + m_len, in, len);
+		m_len += len;
+	}
+
+	void MemoryBuffer::reserve(size_t len)
+	{
+		size_t newLen = len;
+		if (newLen > m_bufferLen)
+		{
+			BYTE* ptr = (BYTE*)calloc(1, newLen);
+			if (ptr == nullptr)
+				throw(std::exception((std::string(__FUNCTION__) + std::string("Allocation error")).c_str()));
+			m_bufferLen = newLen;
+
+			memcpy(ptr, m_ptr, m_len);
+			::free(m_ptr);
+			m_ptr = ptr;
+		}
+	}
+
+	void MemoryBuffer::reset(void)
+	{
+		m_len = 0;
 	}
 
 	void MemoryBuffer::clear(void)
@@ -45,13 +75,23 @@ namespace TheWorld_Utils
 			::free(m_ptr);
 			m_ptr = nullptr;
 			m_len = 0;
+			m_bufferLen = 0;
 		}
 	}
 	
-	MemoryBuffer::~MemoryBuffer(void)
+	BYTE* MemoryBuffer::ptr()
 	{
-		clear();
+		return m_ptr;
 	}
+	size_t MemoryBuffer::len(void)
+	{
+		return m_len;
+	}
+	bool MemoryBuffer::empty(void)
+	{
+		return m_len == 0;
+	}
+
 
 	void Utils::plogInit(plog::Severity sev, plog::IAppender* appender)
 	{
@@ -122,6 +162,7 @@ namespace TheWorld_Utils
 		m_meshFilePath = c.m_meshFilePath;
 		m_cacheDir = c.m_cacheDir;
 		m_meshId = c.m_meshId;
+		m_buffer = c.m_buffer;
 		m_gridStepInWU = c.m_gridStepInWU;
 		m_numVerticesPerSize = c.m_numVerticesPerSize;
 		m_level = c.m_level;
@@ -182,7 +223,7 @@ namespace TheWorld_Utils
 		return m_meshId;
 	}
 
-	void MeshCacheBuffer::refreshMapsFromBuffer(std::string buffer, std::string& meshIdFromBuffer, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer)
+	void MeshCacheBuffer::refreshMapsFromBuffer(std::string buffer, std::string& meshIdFromBuffer, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache)
 	{
 		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
 
@@ -201,6 +242,7 @@ namespace TheWorld_Utils
 		movingStreamBuffer += meshIdSize;
 
 		m_meshId = meshIdFromBuffer;
+		m_buffer = buffer;
 
 		size_t vectSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
 		movingStreamBuffer += size;
@@ -233,7 +275,8 @@ namespace TheWorld_Utils
 			normalsBuffer.set((BYTE*)movingStreamBuffer, normalMapSize);
 			movingStreamBuffer += normalMapSize;
 
-			writeBufferToMeshCache(buffer);
+			if (updateCache)
+				writeBufferToMeshCache(buffer);
 		}
 		else
 		{
@@ -337,6 +380,8 @@ namespace TheWorld_Utils
 		buffer.reserve(streamBufferSize);
 		buffer.append((char*)streamBuffer, streamBufferSize);
 
+		m_buffer = buffer;
+
 		::free(streamBuffer);
 	}
 		
@@ -371,6 +416,7 @@ namespace TheWorld_Utils
 		}
 
 		m_meshId = meshId;
+		m_buffer = buffer;
 
 		size_t vectSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
 		//size_t heightsArraySize = (m_numVerticesPerSize * m_gridStepInWU) * (m_numVerticesPerSize * m_gridStepInWU);
@@ -650,6 +696,8 @@ namespace TheWorld_Utils
 		}
 
 		buffer = std::string((char*)streamBuffer, streamBufferIterator);
+		
+		m_buffer = buffer;
 
 		free(tempFloat16HeithmapBuffer);
 		free(tempFloat32HeithmapBuffer);
@@ -658,74 +706,6 @@ namespace TheWorld_Utils
 
 		m_meshId = meshId;
 	}
-
-//#ifdef _THEWORLD_CLIENT
-//
-//	void MeshCacheBuffer::writeImage(godot::Ref<godot::Image> image, enum class ImageType type)
-//	{
-//		std::string _fileName;
-//		if (type == ImageType::heightmap)
-//			_fileName = m_heightmapFilePath;
-//		else if (type == ImageType::normalmap)
-//			_fileName = m_normalmapFilePath;
-//		else
-//			throw(std::exception((std::string(__FUNCTION__) + std::string("Unknown image type (") + std::to_string((int)type) + ")").c_str()));
-//		godot::String fileName = _fileName.c_str();
-//
-//		int64_t w = image->get_width();
-//		int64_t h = image->get_height();
-//		godot::Image::Format f = image->get_format();
-//		godot::PoolByteArray data = image->get_data();
-//		int64_t size = data.size();
-//		godot::File* file = godot::File::_new();
-//		godot::Error err = file->open(fileName, godot::File::WRITE);
-//		if (err != godot::Error::OK)
-//			throw(std::exception((std::string(__FUNCTION__) + std::string("file->open error (") + std::to_string((int)err) + ") : " + _fileName).c_str()));
-//		file->store_64(w);
-//		file->store_64(h);
-//		file->store_64((int64_t)f);
-//		file->store_64(size);
-//		file->store_buffer(data);
-//		file->close();
-//	}
-//
-//	godot::Ref<godot::Image> MeshCacheBuffer::readImage(bool& ok, enum class ImageType type)
-//	{
-//		std::string _fileName;
-//		if (type == ImageType::heightmap)
-//			_fileName = m_heightmapFilePath;
-//		else if (type == ImageType::normalmap)
-//			_fileName = m_normalmapFilePath;
-//		else
-//			throw(std::exception((std::string(__FUNCTION__) + std::string("Unknown image type (") + std::to_string((int)type) + ")").c_str()));
-//		godot::String fileName = _fileName.c_str();
-//
-//		if (!fs::exists(_fileName))
-//		{
-//			ok = false;
-//			return nullptr;
-//		}
-//
-//		godot::File* file = godot::File::_new();
-//		godot::Error err = file->open(fileName, godot::File::READ);
-//		if (err != godot::Error::OK)
-//			throw(std::exception((std::string(__FUNCTION__) + std::string("file->open error (") + std::to_string((int)err) + ") : " + _fileName).c_str()));
-//		int64_t w = file->get_64();
-//		int64_t h = file->get_64();
-//		godot::Image::Format f = (godot::Image::Format)file->get_64();
-//		int64_t size = file->get_64();
-//		godot::PoolByteArray data = file->get_buffer(size);
-//		file->close();
-//
-//		godot::Ref<godot::Image> image = godot::Image::_new();
-//		image->create_from_data(w, h, false, f, data);
-//
-//		ok = true;
-//
-//		return image;
-//	}
-//		
-//#endif
 
 	void ThreadPool::Start(std::string label, size_t num_threads, /*const std::function<void()>* threadInitFunction, const std::function<void()>* threadDeinitFunction,*/ ThreadInitDeinit* threadInitDeinit)
 	{
