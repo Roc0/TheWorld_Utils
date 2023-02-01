@@ -387,7 +387,7 @@ namespace TheWorld_Utils
 		
 	void MeshCacheBuffer::readMapsFromMeshCache(std::string _meshId, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer)
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+		TheWorld_Utils::GuardProfiler profiler(std::string("ReadFromCache 1 ") + __FUNCTION__, "ALL");
 
 		//BYTE shortBuffer[256 + 1];
 		std::string buffer;
@@ -395,7 +395,7 @@ namespace TheWorld_Utils
 		size_t size;
 		
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "readBufferFromMeshCache");
+			TheWorld_Utils::GuardProfiler profiler(std::string("ReadFromCache 1.1  ") + __FUNCTION__, "readBufferFromMeshCache");
 			readBufferFromMeshCache(_meshId, buffer, vectSizeFromCache);
 		}
 
@@ -436,7 +436,7 @@ namespace TheWorld_Utils
 		movingStreamBuffer += size;
 
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "copy output maps");
+			TheWorld_Utils::GuardProfiler profiler(std::string("ReadFromCache 1.2  ") + __FUNCTION__, "copy output maps");
 
 			size_t float16HeightMapSize = vectSize * uint16_t_size;
 			////float16HeigthsBuffer = std::string((char*)movingStreamBuffer, float16HeightMapSize);
