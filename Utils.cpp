@@ -34,9 +34,31 @@ namespace TheWorld_Utils
 
 	void MemoryBuffer::set(BYTE* in, size_t len)
 	{
-		reserve(len);
-		memcpy(m_ptr, in, len);
+		{
+			//TheWorld_Utils::GuardProfiler profiler(std::string("MemorybufferSet 1 ") + std::to_string(len) + " " + __FUNCTION__, "reserve");
+			reserve(len);
+		}
+		{
+			//TheWorld_Utils::GuardProfiler profiler(std::string("MemorybufferSet 2 ") + std::to_string(len) + " " + __FUNCTION__, "memcpy");
+			memcpy(m_ptr, in, len);
+		}
 		m_len = len;
+
+		//{
+		//	char* p = nullptr;
+		//	{
+		//		TheWorld_Utils::GuardProfiler profiler(std::string("MemorybufferSetTest 1 ") + std::to_string(len) + " " + __FUNCTION__, "calloc");
+		//		p = (char*)calloc(1, len);
+		//	}
+		//	{
+		//		TheWorld_Utils::GuardProfiler profiler(std::string("MemorybufferSetTest 2 ") + std::to_string(len) + " " + __FUNCTION__, "memcpy");
+		//		memcpy(p, in, len);
+		//	}
+		//	{
+		//		TheWorld_Utils::GuardProfiler profiler(std::string("MemorybufferSetTest 3 ") + std::to_string(len) + " " + __FUNCTION__, "free");
+		//		::free(p);
+		//	}
+		//}
 	}
 
 	void MemoryBuffer::append(BYTE* in, size_t len)
@@ -439,26 +461,14 @@ namespace TheWorld_Utils
 			TheWorld_Utils::GuardProfiler profiler(std::string("ReadFromCache 1.2  ") + __FUNCTION__, "copy output maps");
 
 			size_t float16HeightMapSize = vectSize * uint16_t_size;
-			////float16HeigthsBuffer = std::string((char*)movingStreamBuffer, float16HeightMapSize);
-			//float16HeigthsBuffer.clear();
-			//float16HeigthsBuffer.reserve(float16HeightMapSize);
-			//float16HeigthsBuffer.append((char*)movingStreamBuffer, float16HeightMapSize);
 			float16HeigthsBuffer.set(movingStreamBuffer, float16HeightMapSize);
 			movingStreamBuffer += float16HeightMapSize;
 
 			size_t float32HeightMapSize = vectSize * float_size;
-			////float32HeigthsBuffer = std::string((char*)movingStreamBuffer, float32HeightMapSize);
-			//float32HeigthsBuffer.clear();
-			//float32HeigthsBuffer.reserve(float32HeightMapSize);
-			//float32HeigthsBuffer.append((char*)movingStreamBuffer, float32HeightMapSize);
 			float32HeigthsBuffer.set(movingStreamBuffer, float32HeightMapSize);
 			movingStreamBuffer += float32HeightMapSize;
 
 			size_t normalMapSize = vectSize * sizeof(struct TheWorld_Utils::_RGB);
-			////normalsBuffer = std::string((char*)movingStreamBuffer, normalMapSize);
-			//normalsBuffer.clear();
-			//normalsBuffer.reserve(normalMapSize);
-			//normalsBuffer.append((char*)movingStreamBuffer, normalMapSize);
 			normalsBuffer.set(movingStreamBuffer, normalMapSize);
 			movingStreamBuffer += normalMapSize;
 		}
