@@ -198,7 +198,7 @@ namespace TheWorld_Utils
 		__declspec(dllexport) void readBufferFromMeshCache(std::string meshId, std::string& buffer, size_t& vectSizeFromCache);
 		__declspec(dllexport) void readMapsFromMeshCache(std::string meshId, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer);
 		__declspec(dllexport) void writeBufferToMeshCache(std::string buffer);
-		__declspec(dllexport) void setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, std::string& buffer);
+		__declspec(dllexport) void setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude);
 		//__declspec(dllexport) std::string getCacheDir()
 		//{
 		//	return m_cacheDir;

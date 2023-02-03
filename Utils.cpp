@@ -500,7 +500,7 @@ namespace TheWorld_Utils
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Rename error!").c_str()));
 	}
 		
-	void MeshCacheBuffer::setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, std::string& buffer)
+	void MeshCacheBuffer::setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude)
 	{
 		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
 
@@ -565,7 +565,7 @@ namespace TheWorld_Utils
 		TheWorld_Utils::serializeToByteStream<size_t>(vectSize, streamBuffer + streamBufferIterator, size);
 		streamBufferIterator += size;
 
-		float minAltitude = 0, maxAltitude = 0;
+		minAltitude = 0, maxAltitude = 0;
 		bool first = true;
 		size_t idx = 0;
 		if (vectSize != 0)
