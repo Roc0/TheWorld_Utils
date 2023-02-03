@@ -283,17 +283,14 @@ namespace TheWorld_Utils
 			movingStreamBuffer += size;
 
 			size_t float16HeightMapSize = vectSize * uint16_t_size;
-			//float16HeigthsBuffer = std::string((char*)movingStreamBuffer, float16HeightMapSize);
 			float16HeigthsBuffer.set((BYTE*)movingStreamBuffer, float16HeightMapSize);
 			movingStreamBuffer += float16HeightMapSize;
 
 			size_t float32HeightMapSize = vectSize * float_size;
-			//float32HeigthsBuffer = std::string((char*)movingStreamBuffer, float32HeightMapSize);
 			float32HeigthsBuffer.set((BYTE*)movingStreamBuffer, float32HeightMapSize);
 			movingStreamBuffer += float32HeightMapSize;
 
 			size_t normalMapSize = vectSize * sizeof(struct TheWorld_Utils::_RGB);
-			//normalsBuffer = std::string((char*)movingStreamBuffer, normalMapSize);
 			normalsBuffer.set((BYTE*)movingStreamBuffer, normalMapSize);
 			movingStreamBuffer += normalMapSize;
 
