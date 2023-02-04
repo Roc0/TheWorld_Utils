@@ -27,6 +27,15 @@ namespace TheWorld_Utils
 		m_bufferLen = 0;
 	}
 
+	MemoryBuffer::MemoryBuffer(BYTE* in, size_t len)
+	{
+		m_ptr = nullptr;
+		m_len = 0;
+		m_bufferLen = 0;
+
+		set(in, len);
+	}
+
 	MemoryBuffer::~MemoryBuffer(void)
 	{
 		clear();
@@ -104,6 +113,10 @@ namespace TheWorld_Utils
 	BYTE* MemoryBuffer::ptr()
 	{
 		return m_ptr;
+	}
+	size_t MemoryBuffer::size(void)
+	{
+		return m_len;
 	}
 	size_t MemoryBuffer::len(void)
 	{
@@ -184,7 +197,7 @@ namespace TheWorld_Utils
 		m_meshFilePath = c.m_meshFilePath;
 		m_cacheDir = c.m_cacheDir;
 		m_meshId = c.m_meshId;
-		m_buffer = c.m_buffer;
+		//m_buffer = c.m_buffer;
 		m_gridStepInWU = c.m_gridStepInWU;
 		m_numVerticesPerSize = c.m_numVerticesPerSize;
 		m_level = c.m_level;
@@ -207,20 +220,28 @@ namespace TheWorld_Utils
 		BYTE shortBuffer[256 + 1];
 		size_t size;
 
+		// get size of a size_t
+		size_t size_t_size = sizeof(size_t);
+		//TheWorld_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_t_size);
+
 		FILE* inFile = nullptr;
 		errno_t err = fopen_s(&inFile, m_meshFilePath.c_str(), "rb");
 		if (err != 0)
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Open " + m_meshFilePath + " in errore - Err=" + std::to_string(err)).c_str()));
+
+		if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
+		{
+			fclose(inFile);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 2!").c_str()));
+		}
+		// and deserialize it
+		size_t bufferSize = TheWorld_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
 
 		if (fread(shortBuffer, 1, 1, inFile) != 1)	// "0"
 		{
 			fclose(inFile);
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 1!").c_str()));
 		}
-
-		// get size of a size_t
-		size_t size_t_size = sizeof(size_t);
-		//TheWorld_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_t_size);
 
 		// read the serialized size of the mesh id
 		if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
@@ -245,7 +266,7 @@ namespace TheWorld_Utils
 		return m_meshId;
 	}
 
-	void MeshCacheBuffer::refreshMapsFromBuffer(std::string buffer, std::string& meshIdFromBuffer, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache)
+	void MeshCacheBuffer::refreshMapsFromBuffer(std::string& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache)
 	{
 		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
 
@@ -264,7 +285,19 @@ namespace TheWorld_Utils
 		movingStreamBuffer += meshIdSize;
 
 		m_meshId = meshIdFromBuffer;
-		m_buffer = buffer;
+		//m_buffer = buffer;
+		//m_buffer.clear();
+
+		size_t terrainEditValuesSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
+		movingStreamBuffer += size;
+
+		if (terrainEditValuesSize > 0)
+		{
+			terrainEditValues.set((BYTE*)movingStreamBuffer, terrainEditValuesSize);
+			movingStreamBuffer += terrainEditValuesSize;
+		}
+		else
+			terrainEditValues.reset();
 
 		size_t vectSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
 		movingStreamBuffer += size;
@@ -317,22 +350,30 @@ namespace TheWorld_Utils
 		if (!fs::exists(m_meshFilePath))
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("not found current quadrant in cache").c_str()));
 
+		size_t size_t_size = sizeof(size_t);	// get size of a size_t
+		//TheWorld_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_t_size);
+		size_t uint16_t_size = sizeof(uint16_t);	// the size of an half ==> float_16
+		//TheWorld_Utils::serializeToByteStream<uint16_t>(0, shortBuffer, uint16_t_size);
+		size_t float_size = sizeof(float);
+
 		FILE* inFile = nullptr;
 		errno_t err = fopen_s(&inFile, m_meshFilePath.c_str(), "rb");
 		if (err != 0)
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Open " + m_meshFilePath + " in errore - Err=" + std::to_string(err)).c_str()));
+
+		if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
+		{
+			fclose(inFile);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 2!").c_str()));
+		}
+		// and deserialize it
+		size_t streamBufferSize = TheWorld_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
 
 		if (fread(shortBuffer, 1, 1, inFile) != 1)	// "0"
 		{
 			fclose(inFile);
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 1!").c_str()));
 		}
-
-		size_t size_t_size = sizeof(size_t);	// get size of a size_t
-		//TheWorld_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_t_size);
-		size_t uint16_t_size = sizeof(uint16_t);	// the size of an half ==> float_16
-		//TheWorld_Utils::serializeToByteStream<uint16_t>(0, shortBuffer, uint16_t_size);
-		size_t float_size = sizeof(float);
 
 		// read the serialized size of the mesh id
 		if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
@@ -360,20 +401,32 @@ namespace TheWorld_Utils
 
 		m_meshId = meshId;
 
-		// read the serialized size of the vector of heigths
-		if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
-		{
-			fclose(inFile);
-			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 4!").c_str()));
-		}
-		// and deserialize it
-		vectSizeFromCache = TheWorld_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
+		//// read the serialized size of the terrain data values
+		//if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
+		//{
+		//	fclose(inFile);
+		//	throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 4.1!").c_str()));
+		//}
+		//// and deserialize it
+		//size_t terrainDataValuesBufferSize = TheWorld_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
 
-		// alloc buffer to contain the serialized entire vector of GridVertex
-		size_t float16HeightmapSize = vectSizeFromCache * uint16_t_size;
-		size_t float32HeightmapSize = vectSizeFromCache * float_size;
-		size_t normalmapSize = vectSizeFromCache * sizeof(struct _RGB);
-		size_t streamBufferSize = 1 /* "0" */ + size_t_size + meshId.length() + size_t_size /* numheigths */ + float_size /*min_altitude*/ + float_size /*max_altitude*/ + float16HeightmapSize + float32HeightmapSize + normalmapSize;
+		//// read the serialized size of the vector of heigths
+		//if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
+		//{
+		//	fclose(inFile);
+		//	throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 4!").c_str()));
+		//}
+		//// and deserialize it
+		//vectSizeFromCache = TheWorld_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
+
+		//// alloc buffer to contain the serialized entire vector of GridVertex
+		//size_t float16HeightmapSize = vectSizeFromCache * uint16_t_size;
+		//size_t float32HeightmapSize = vectSizeFromCache * float_size;
+		//size_t normalmapSize = vectSizeFromCache * sizeof(struct _RGB);
+		//size_t streamBufferSize = 1 /* "0" */
+		//	+ size_t_size + meshId.length()
+		//	+ size_t_size /*terrain data values buffer size*/ + terrainDataValuesBufferSize
+		//	+ size_t_size /* numheigths */ + float_size /*min_altitude*/ + float_size /*max_altitude*/ + float16HeightmapSize + float32HeightmapSize + normalmapSize;
 		BYTE* streamBuffer = (BYTE*)calloc(1, streamBufferSize);
 		if (streamBuffer == nullptr)
 		{
@@ -390,6 +443,13 @@ namespace TheWorld_Utils
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("fseek to beginning of file error!").c_str()));
 		}
 
+		// bypass buffer size
+		if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
+		{
+			fclose(inFile);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 2!").c_str()));
+		}
+
 		size_t s = fread(streamBuffer, streamBufferSize, 1, inFile);
 
 		fclose(inFile);
@@ -399,12 +459,13 @@ namespace TheWorld_Utils
 		buffer.reserve(streamBufferSize);
 		buffer.append((char*)streamBuffer, streamBufferSize);
 
-		m_buffer = buffer;
+		//m_buffer = buffer;
+		//m_buffer.clear();
 
 		::free(streamBuffer);
 	}
 		
-	void MeshCacheBuffer::readMapsFromMeshCache(std::string _meshId, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer)
+	void MeshCacheBuffer::readMapsFromMeshCache(std::string _meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("ReadFromCache 1 ") + __FUNCTION__, "ALL");
 
@@ -435,7 +496,19 @@ namespace TheWorld_Utils
 		}
 
 		m_meshId = meshId;
-		m_buffer = buffer;
+		//m_buffer = buffer;
+		//m_buffer.clear();
+
+		size_t terrainEditValuesSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
+		movingStreamBuffer += size;
+
+		if (terrainEditValuesSize > 0)
+		{
+			terrainEditValues.set((BYTE*)movingStreamBuffer, terrainEditValuesSize);
+			movingStreamBuffer += terrainEditValuesSize;
+		}
+		else
+			terrainEditValues.reset();
 
 		size_t vectSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
 		//size_t heightsArraySize = (m_numVerticesPerSize * m_gridStepInWU) * (m_numVerticesPerSize * m_gridStepInWU);
@@ -471,12 +544,28 @@ namespace TheWorld_Utils
 		}
 	}
 
-	void MeshCacheBuffer::writeBufferToMeshCache(std::string buffer)
+	void MeshCacheBuffer::writeBufferToMeshCache(std::string& _buffer)
 	{
 		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
 
+		//std::string* buffer;
+		//if (!_buffer.empty())
+		//	buffer = &_buffer;
+		//else
+		//{
+		//	if (!m_buffer.empty())
+		//		buffer = &m_buffer;
+		//	else
+		//		return;
+		//}
+
 		std::string tempPath = m_meshFilePath + ".tmp";
 		
+		BYTE shortBuffer[256 + 1];
+		size_t bufferSize_size = 0;	// get size of a size_t
+
+		TheWorld_Utils::serializeToByteStream<size_t>(_buffer.size(), shortBuffer, bufferSize_size);
+
 		FILE* outFile = nullptr;
 		errno_t err = fopen_s(&outFile, tempPath.c_str(), "wb");
 		if (err != 0)
@@ -484,7 +573,13 @@ namespace TheWorld_Utils
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Open " + m_meshFilePath + " in errore - Err=" + std::to_string(err)).c_str()));
 		}
 
-		if (fwrite(buffer.c_str(), buffer.size(), 1, outFile) != 1)
+		if (fwrite(shortBuffer, bufferSize_size, 1, outFile) != 1)
+		{
+			fclose(outFile);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Write error 3!").c_str()));
+		}
+
+		if (fwrite(_buffer.c_str(), _buffer.size(), 1, outFile) != 1)
 		{
 			fclose(outFile);
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Write error 3!").c_str()));
@@ -500,7 +595,7 @@ namespace TheWorld_Utils
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Rename error!").c_str()));
 	}
 		
-	void MeshCacheBuffer::setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude)
+	void MeshCacheBuffer::setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude)
 	{
 		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
 
@@ -517,7 +612,10 @@ namespace TheWorld_Utils
 		size_t float16HeightmapSize = vectSize * uint16_t_size;
 		size_t float32HeightmapSize = vectSize * float_size;
 		size_t normalmapSize = vectSize * sizeof(struct _RGB);
-		size_t streamBufferSize = 1 /* "0" */ + size_t_size + meshId.length() + size_t_size /* numheigths */ + float_size /*min_altitude*/ + float_size /*max_altitude*/ + float16HeightmapSize + float32HeightmapSize + normalmapSize;
+		size_t streamBufferSize = 1 /* "0" */ 
+			+ size_t_size + meshId.length()
+			+ size_t_size + terrainEditValuesBuffer.size()
+			+ size_t_size /* numheigths */ + float_size /*min_altitude*/ + float_size /*max_altitude*/ + float16HeightmapSize + float32HeightmapSize + normalmapSize;
 
 		BYTE* streamBuffer = (BYTE*)calloc(1, streamBufferSize);
 		if (streamBuffer == nullptr)
@@ -560,6 +658,15 @@ namespace TheWorld_Utils
 
 		memcpy(streamBuffer + streamBufferIterator, meshId.c_str(), meshId.length());
 		streamBufferIterator += meshId.length();
+
+		TheWorld_Utils::serializeToByteStream<size_t>(terrainEditValuesBuffer.size(), streamBuffer + streamBufferIterator, size);
+		streamBufferIterator += size;
+
+		if (terrainEditValuesBuffer.size() > 0)
+		{
+			memcpy(streamBuffer + streamBufferIterator, terrainEditValuesBuffer.ptr(), terrainEditValuesBuffer.size());
+			streamBufferIterator += terrainEditValuesBuffer.size();
+		}
 
 		size = 0;
 		TheWorld_Utils::serializeToByteStream<size_t>(vectSize, streamBuffer + streamBufferIterator, size);
@@ -704,7 +811,10 @@ namespace TheWorld_Utils
 
 		buffer = std::string((char*)streamBuffer, streamBufferIterator);
 		
-		m_buffer = buffer;
+		//if (saveBuffer)
+		//	m_buffer = buffer;
+		//else
+		//	m_buffer.clear();
 
 		free(tempFloat16HeithmapBuffer);
 		free(tempFloat32HeithmapBuffer);
