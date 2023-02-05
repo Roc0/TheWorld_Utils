@@ -164,12 +164,18 @@ namespace TheWorld_Utils
 			return _counterStarted;
 		}
 
+		template <class TT = TimeT>	TT partialDuration() const
+		{
+			return std::chrono::duration_cast<TT>(ClockT::now() - _start);
+		}
+
 		template <class TT = TimeT>	TT duration() const
 		{
 			Expects(_end != timep_t{} && "toc before reporting");
 			//assert(_end != timep_t{} && "toc before reporting");
 			return std::chrono::duration_cast<TT>(_end - _start);
 		}
+
 	private:
 		bool _counterStarted;
 		std::string _headerMsg;
