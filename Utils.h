@@ -6,6 +6,10 @@
 //	#include <PoolArrays.hpp>
 //#endif
 
+#ifndef MYAPI 
+#define MYAPI   __declspec( dllimport )
+#endif 
+
 #include "framework.h"
 #include <cfloat>
 #include <assert.h> 
@@ -66,6 +70,7 @@ namespace TheWorld_Utils
 		__declspec(dllexport) void set(BYTE* in, size_t size);
 		__declspec(dllexport) void append(BYTE* in, size_t size);
 		__declspec(dllexport) void reserve(size_t size);
+		__declspec(dllexport) size_t reserved(void);
 		__declspec(dllexport) void reset(void);
 		__declspec(dllexport) BYTE* ptr();
 		//__declspec(dllexport) size_t len(void);
@@ -73,15 +78,25 @@ namespace TheWorld_Utils
 		__declspec(dllexport) bool empty(void);
 		__declspec(dllexport) void clear(void);
 		__declspec(dllexport) void adjustSize(size_t size);
+		__declspec(dllexport) void populateFloatVector(std::vector<float>& v);
+		__declspec(dllexport) void populateUint16Vector(std::vector<uint16_t>& v);
+		template <typename T> __declspec(dllexport) void populateVector(std::vector<T>& v)
+		{
+			size_t numElements = size() / sizeof(T);
+			my_assert(size() == numElements * sizeof(T));
+			v.assign((T*)m_ptr, (T*)m_ptr + numElements);
+		}
 
 	private:
 		MemoryBuffer(const MemoryBuffer&);
 		void operator=(const MemoryBuffer&);
 
 		BYTE* m_ptr;
-		size_t m_len;
-		size_t m_bufferLen;
+		size_t m_size;
+		size_t m_bufferSize;
 	};
+
+	template<> MYAPI void MemoryBuffer::populateVector<float>(std::vector<float>& v);
 
 	template <class TimeT = std::chrono::milliseconds, class ClockT = std::chrono::steady_clock> class Timer
 	{
@@ -197,6 +212,19 @@ namespace TheWorld_Utils
 	class MeshCacheBuffer
 	{
 	public:
+		class CacheData
+		{
+		public:
+			std::string meshId;
+			TheWorld_Utils::MemoryBuffer* terrainEditValues;
+			float minHeight;
+			float maxHeight;
+			TheWorld_Utils::MemoryBuffer* heights16Buffer;
+			TheWorld_Utils::MemoryBuffer* heights32Buffer;
+			TheWorld_Utils::MemoryBuffer* normalsBuffer;
+		};
+
+	public:
 		__declspec(dllexport) MeshCacheBuffer(void);
 		__declspec(dllexport) ~MeshCacheBuffer(void);
 		__declspec(dllexport) MeshCacheBuffer(std::string cacheDir, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex);
@@ -206,11 +234,18 @@ namespace TheWorld_Utils
 
 		__declspec(dllexport) std::string getMeshIdFromCache(void);
 		__declspec(dllexport) void refreshMapsFromCache(std::string meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer);
+		__declspec(dllexport) void refreshMapsFromBuffer(const BYTE* buffer, const size_t bufferSize, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache);
+		__declspec(dllexport) void refreshMapsFromBuffer(TheWorld_Utils::MemoryBuffer& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache);
 		__declspec(dllexport) void refreshMapsFromBuffer(std::string& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache);
-		__declspec(dllexport) void readBufferFromCache(std::string meshId, std::string& buffer, size_t& vectSizeFromCache);
+		__declspec(dllexport) void readBufferFromCache(std::string meshId, TheWorld_Utils::MemoryBuffer& buffer);
+		__declspec(dllexport) void readBufferFromCache(std::string meshId, std::string& buffer);
 		__declspec(dllexport) void writeBufferToCache(std::string& buffer);
+		__declspec(dllexport) void writeBufferToCache(TheWorld_Utils::MemoryBuffer& buffer);
+		__declspec(dllexport) void writeBufferToCache(const BYTE* buffer, const size_t bufferSize);
 		__declspec(dllexport) void setBufferFromHeights(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude, bool generateNormals);
+		__declspec(dllexport) void setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, TheWorld_Utils::MemoryBuffer& buffer);
 		__declspec(dllexport) void generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, TheWorld_Utils::MemoryBuffer& normalsBuffer);
+		__declspec(dllexport) void generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, BYTE* normalsBuffer, const size_t normalsBufferSize, size_t& usedBufferSize);
 		//__declspec(dllexport) std::string getCacheDir()
 		//{
 		//	return m_cacheDir;

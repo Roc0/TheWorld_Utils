@@ -1,5 +1,7 @@
 //#include "pch.h"
 
+#define MYAPI   __declspec( dllexport )
+
 //#define _THEWORLD_CLIENT
 
 //#ifdef _THEWORLD_CLIENT
@@ -7,6 +9,7 @@
 //	#include <ResourceLoader.hpp>
 //	#include <File.hpp>
 //#endif
+
 #include <cstdio>
 #include "Utils.h"
 #include "Profiler.h"
@@ -23,15 +26,15 @@ namespace TheWorld_Utils
 	MemoryBuffer::MemoryBuffer(void)
 	{
 		m_ptr = nullptr;
-		m_len = 0;
-		m_bufferLen = 0;
+		m_size = 0;
+		m_bufferSize = 0;
 	}
 
 	MemoryBuffer::MemoryBuffer(BYTE* in, size_t len)
 	{
 		m_ptr = nullptr;
-		m_len = 0;
-		m_bufferLen = 0;
+		m_size = 0;
+		m_bufferSize = 0;
 
 		set(in, len);
 	}
@@ -41,17 +44,17 @@ namespace TheWorld_Utils
 		clear();
 	}
 
-	void MemoryBuffer::set(BYTE* in, size_t len)
+	void MemoryBuffer::set(BYTE* in, size_t size)
 	{
 		{
 			//TheWorld_Utils::GuardProfiler profiler(std::string("MemorybufferSet 1 ") + std::to_string(len) + " " + __FUNCTION__, "reserve");
-			reserve(len);
+			reserve(size);
 		}
 		{
 			//TheWorld_Utils::GuardProfiler profiler(std::string("MemorybufferSet 2 ") + std::to_string(len) + " " + __FUNCTION__, "memcpy");
-			memcpy(m_ptr, in, len);
+			memcpy(m_ptr, in, size);
 		}
-		m_len = len;
+		m_size = size;
 
 		//{
 		//	char* p = nullptr;
@@ -70,33 +73,38 @@ namespace TheWorld_Utils
 		//}
 	}
 
-	void MemoryBuffer::append(BYTE* in, size_t len)
+	void MemoryBuffer::append(BYTE* in, size_t size)
 	{
-		size_t newLen = m_len + len;
+		size_t newLen = m_size + size;
 		reserve(newLen);
-		memcpy(m_ptr + m_len, in, len);
-		m_len += len;
+		memcpy(m_ptr + m_size, in, size);
+		m_size += size;
 	}
 
-	void MemoryBuffer::reserve(size_t len)
+	void MemoryBuffer::reserve(size_t size)
 	{
-		size_t newLen = len;
-		if (newLen > m_bufferLen)
+		size_t newLen = size;
+		if (newLen > m_bufferSize)
 		{
 			BYTE* ptr = (BYTE*)calloc(1, newLen);
 			if (ptr == nullptr)
 				throw(std::exception((std::string(__FUNCTION__) + std::string("Allocation error")).c_str()));
-			m_bufferLen = newLen;
+			m_bufferSize = newLen;
 
-			memcpy(ptr, m_ptr, m_len);
+			memcpy(ptr, m_ptr, m_size);
 			::free(m_ptr);
 			m_ptr = ptr;
 		}
 	}
 
+	size_t MemoryBuffer::reserved(void)
+	{
+		return m_bufferSize;
+	}
+
 	void MemoryBuffer::reset(void)
 	{
-		m_len = 0;
+		m_size = 0;
 	}
 
 	void MemoryBuffer::clear(void)
@@ -105,8 +113,8 @@ namespace TheWorld_Utils
 		{
 			::free(m_ptr);
 			m_ptr = nullptr;
-			m_len = 0;
-			m_bufferLen = 0;
+			m_size = 0;
+			m_bufferSize = 0;
 		}
 	}
 	
@@ -116,7 +124,7 @@ namespace TheWorld_Utils
 	}
 	size_t MemoryBuffer::size(void)
 	{
-		return m_len;
+		return m_size;
 	}
 	//size_t MemoryBuffer::len(void)
 	//{
@@ -124,11 +132,25 @@ namespace TheWorld_Utils
 	//}
 	bool MemoryBuffer::empty(void)
 	{
-		return m_len == 0;
+		return m_size == 0;
 	}
 	void MemoryBuffer::adjustSize(size_t size)
 	{
-		m_len = size;
+		m_size = size;
+	}
+
+	void MemoryBuffer::populateFloatVector(std::vector<float>& v)
+	{
+		size_t numElements = size() / sizeof(float);
+		my_assert(size() == numElements * sizeof(float));
+		v.assign((float*)m_ptr, (float*)m_ptr + numElements);
+	}
+
+	void MemoryBuffer::populateUint16Vector(std::vector<uint16_t>& v)
+	{
+		size_t numElements = size() / sizeof(uint16_t);
+		my_assert(size() == numElements * sizeof(uint16_t));
+		v.assign((uint16_t*)m_ptr, (uint16_t*)m_ptr + numElements);
 	}
 
 	void Utils::plogInit(plog::Severity sev, plog::IAppender* appender)
@@ -275,13 +297,13 @@ namespace TheWorld_Utils
 
 		//BYTE shortBuffer[256 + 1];
 		//size_t size;
-		std::string buffer;
-		size_t vectSizeFromCache;
+		//std::string buffer;
+		TheWorld_Utils::MemoryBuffer buffer;
 		std::string meshIdFromBuffer;
 
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("refreshMapsFromCache 1.1  ") + __FUNCTION__, "readBufferFromCache");
-			readBufferFromCache(_meshId, buffer, vectSizeFromCache);
+			readBufferFromCache(_meshId, buffer);
 		}
 
 		{
@@ -360,15 +382,15 @@ namespace TheWorld_Utils
 		//}
 	}
 
-	void MeshCacheBuffer::refreshMapsFromBuffer(std::string& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache)
+	void MeshCacheBuffer::refreshMapsFromBuffer(const BYTE* buffer, const size_t bufferSize, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache)
 	{
 		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
 
-		//BYTE shortBuffer[256 + 1];
+	//BYTE shortBuffer[256 + 1];
 		size_t size = 0;
 
-		const char* movingStreamBuffer = buffer.c_str();
-		const char* endOfBuffer = movingStreamBuffer + buffer.size();
+		const char* movingStreamBuffer = (const char*)buffer;
+		const char* endOfBuffer = movingStreamBuffer + bufferSize;
 
 		movingStreamBuffer++;	// bypass "0"
 
@@ -430,7 +452,7 @@ namespace TheWorld_Utils
 			}
 
 			if (updateCache)
-				writeBufferToCache(buffer);
+				writeBufferToCache(buffer, bufferSize);
 		}
 		else
 		{
@@ -441,7 +463,98 @@ namespace TheWorld_Utils
 		}
 	}
 
-	void MeshCacheBuffer::readBufferFromCache(std::string _meshId, std::string& buffer, size_t& vectSizeFromCache)
+	void MeshCacheBuffer::refreshMapsFromBuffer(TheWorld_Utils::MemoryBuffer& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache)
+	{
+		refreshMapsFromBuffer(buffer.ptr(), buffer.size(), meshIdFromBuffer, terrainEditValues, minAltitude, maxAltitude, float16HeigthsBuffer, float32HeigthsBuffer, normalsBuffer, updateCache);
+	}
+
+	void MeshCacheBuffer::refreshMapsFromBuffer(std::string& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache)
+	{
+		refreshMapsFromBuffer((BYTE*)buffer.c_str(), buffer.size(), meshIdFromBuffer, terrainEditValues, minAltitude, maxAltitude, float16HeigthsBuffer, float32HeigthsBuffer, normalsBuffer, updateCache);
+	}
+	
+	//void MeshCacheBuffer::refreshMapsFromBuffer(std::string& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache)
+	//{
+	//	//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+
+	//	//BYTE shortBuffer[256 + 1];
+	//	size_t size = 0;
+
+	//	const char* movingStreamBuffer = buffer.c_str();
+	//	const char* endOfBuffer = movingStreamBuffer + buffer.size();
+
+	//	movingStreamBuffer++;	// bypass "0"
+
+	//	size_t meshIdSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
+	//	movingStreamBuffer += size;
+
+	//	meshIdFromBuffer = std::string(movingStreamBuffer, meshIdSize);
+	//	movingStreamBuffer += meshIdSize;
+
+	//	m_meshId = meshIdFromBuffer;
+	//	//m_buffer = buffer;
+	//	//m_buffer.clear();
+
+	//	size_t terrainEditValuesSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
+	//	movingStreamBuffer += size;
+
+	//	if (terrainEditValuesSize > 0)
+	//	{
+	//		terrainEditValues.set((BYTE*)movingStreamBuffer, terrainEditValuesSize);
+	//		movingStreamBuffer += terrainEditValuesSize;
+	//	}
+	//	else
+	//		terrainEditValues.reset();
+
+	//	size_t vectSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
+	//	movingStreamBuffer += size;
+
+	//	size_t uint16_t_size = sizeof(uint16_t);	// the size of an half ==> float_16
+	//	//TheWorld_Utils::serializeToByteStream<uint16_t>(0, shortBuffer, uint16_t_size);
+
+	//	size_t float_size = sizeof(float);
+
+	//	if (vectSize > 0)
+	//	{
+	//		minAltitude = TheWorld_Utils::deserializeFromByteStream<float>((BYTE*)movingStreamBuffer, size);
+	//		movingStreamBuffer += size;
+
+	//		maxAltitude = TheWorld_Utils::deserializeFromByteStream<float>((BYTE*)movingStreamBuffer, size);
+	//		movingStreamBuffer += size;
+
+	//		size_t float16HeightMapSize = vectSize * uint16_t_size;
+	//		float16HeigthsBuffer.set((BYTE*)movingStreamBuffer, float16HeightMapSize);
+	//		movingStreamBuffer += float16HeightMapSize;
+
+	//		size_t float32HeightMapSize = vectSize * float_size;
+	//		float32HeigthsBuffer.set((BYTE*)movingStreamBuffer, float32HeightMapSize);
+	//		movingStreamBuffer += float32HeightMapSize;
+
+	//		struct TheWorld_Utils::_RGB* rgb = (struct TheWorld_Utils::_RGB*)movingStreamBuffer;
+	//		if (rgb->r == 0 && rgb->g == 0 && rgb->b == 0)
+	//		{
+	//			normalsBuffer.clear();
+	//		}
+	//		else
+	//		{
+	//			size_t normalMapSize = vectSize * sizeof(struct TheWorld_Utils::_RGB);
+	//			normalsBuffer.set((BYTE*)movingStreamBuffer, normalMapSize);
+	//			movingStreamBuffer += normalMapSize;
+	//		}
+
+	//		if (updateCache)
+	//			writeBufferToCache(buffer);
+	//	}
+	//	else
+	//	{
+	//		minAltitude = maxAltitude = 0;
+	//		float16HeigthsBuffer.clear();
+	//		float32HeigthsBuffer.clear();
+	//		normalsBuffer.clear();
+	//	}
+	//}
+
+	void MeshCacheBuffer::readBufferFromCache(std::string _meshId, TheWorld_Utils::MemoryBuffer& buffer)
 	{
 		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
 
@@ -529,19 +642,23 @@ namespace TheWorld_Utils
 		//	+ size_t_size + meshId.length()
 		//	+ size_t_size /*terrain data values buffer size*/ + terrainDataValuesBufferSize
 		//	+ size_t_size /* numheigths */ + float_size /*min_altitude*/ + float_size /*max_altitude*/ + float16HeightmapSize + float32HeightmapSize + normalmapSize;
-		BYTE* streamBuffer = (BYTE*)calloc(1, streamBufferSize);
-		if (streamBuffer == nullptr)
-		{
-			fclose(inFile);
-			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Allocation error!").c_str()));
-		}
 		
+		//BYTE* streamBuffer = (BYTE*)calloc(1, streamBufferSize);
+		//if (streamBuffer == nullptr)
+		//{
+		//	fclose(inFile);
+		//	throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Allocation error!").c_str()));
+		//}
+
+		buffer.reserve(streamBufferSize);
+		BYTE* streamBuffer = buffer.ptr();
+
 		// reposition to the beginning of file
 		int ret = fseek(inFile, 0, SEEK_SET);
 		if (ret != 0)
 		{
 			fclose(inFile);
-			::free(streamBuffer);
+			//::free(streamBuffer);
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("fseek to beginning of file error!").c_str()));
 		}
 
@@ -556,18 +673,169 @@ namespace TheWorld_Utils
 
 		fclose(inFile);
 
-		buffer = std::string((char*)streamBuffer, streamBufferSize);
-		buffer.clear();
-		buffer.reserve(streamBufferSize);
-		buffer.append((char*)streamBuffer, streamBufferSize);
+		buffer.adjustSize(streamBufferSize);
+
+		//buffer = std::string((char*)streamBuffer, streamBufferSize);
+		//buffer.clear();
+		//buffer.reserve(streamBufferSize);
+		//buffer.append((char*)streamBuffer, streamBufferSize);
 
 		//m_buffer = buffer;
 		//m_buffer.clear();
 
-		::free(streamBuffer);
+		//::free(streamBuffer);
 	}
+
+	void MeshCacheBuffer::readBufferFromCache(std::string _meshId, std::string& _buffer)
+	{
+		TheWorld_Utils::MemoryBuffer buffer;
+
+		readBufferFromCache(_meshId, buffer);
 		
-	void MeshCacheBuffer::writeBufferToCache(std::string& _buffer)
+		size_t size = buffer.size();
+
+		_buffer.clear();
+		_buffer.reserve(size);
+		_buffer.append((char*)buffer.ptr(), size);
+	}
+
+	//void MeshCacheBuffer::readBufferFromCache(std::string _meshId, std::string& buffer, size_t& vectSizeFromCache)
+	//{
+	//	//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+
+	//	BYTE shortBuffer[256 + 1];
+	//	size_t size;
+
+	//	// read vertices from local cache
+	//	if (!fs::exists(m_meshFilePath))
+	//		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("not found current quadrant in cache").c_str()));
+
+	//	size_t size_t_size = sizeof(size_t);	// get size of a size_t
+	//	//TheWorld_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_t_size);
+	//	size_t uint16_t_size = sizeof(uint16_t);	// the size of an half ==> float_16
+	//	//TheWorld_Utils::serializeToByteStream<uint16_t>(0, shortBuffer, uint16_t_size);
+	//	size_t float_size = sizeof(float);
+
+	//	FILE* inFile = nullptr;
+	//	errno_t err = fopen_s(&inFile, m_meshFilePath.c_str(), "rb");
+	//	if (err != 0)
+	//		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Open " + m_meshFilePath + " in errore - Err=" + std::to_string(err)).c_str()));
+
+	//	if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
+	//	{
+	//		fclose(inFile);
+	//		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 2!").c_str()));
+	//	}
+	//	// and deserialize it
+	//	size_t streamBufferSize = TheWorld_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
+
+	//	if (fread(shortBuffer, 1, 1, inFile) != 1)	// "0"
+	//	{
+	//		fclose(inFile);
+	//		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 1!").c_str()));
+	//	}
+
+	//	// read the serialized size of the mesh id
+	//	if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
+	//	{
+	//		fclose(inFile);
+	//		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 2!").c_str()));
+	//	}
+	//	// and deserialize it
+	//	size_t meshIdSize = TheWorld_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
+
+	//	// read the mesh id
+	//	if (fread(shortBuffer, meshIdSize, 1, inFile) != 1)
+	//	{
+	//		fclose(inFile);
+	//		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 3!").c_str()));
+	//	}
+	//	// and deserialize it
+	//	std::string meshId((char*)shortBuffer, meshIdSize);
+
+	//	if (meshId != _meshId)
+	//	{
+	//		fclose(inFile);
+	//		throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("meshId from cache (") + meshId + ") not equal to meshId from server (" + _meshId).c_str()));
+	//	}
+
+	//	m_meshId = meshId;
+
+	//	//// read the serialized size of the terrain data values
+	//	//if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
+	//	//{
+	//	//	fclose(inFile);
+	//	//	throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 4.1!").c_str()));
+	//	//}
+	//	//// and deserialize it
+	//	//size_t terrainDataValuesBufferSize = TheWorld_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
+
+	//	//// read the serialized size of the vector of heigths
+	//	//if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
+	//	//{
+	//	//	fclose(inFile);
+	//	//	throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 4!").c_str()));
+	//	//}
+	//	//// and deserialize it
+	//	//vectSizeFromCache = TheWorld_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
+
+	//	//// alloc buffer to contain the serialized entire vector of GridVertex
+	//	//size_t float16HeightmapSize = vectSizeFromCache * uint16_t_size;
+	//	//size_t float32HeightmapSize = vectSizeFromCache * float_size;
+	//	//size_t normalmapSize = vectSizeFromCache * sizeof(struct _RGB);
+	//	//size_t streamBufferSize = 1 /* "0" */
+	//	//	+ size_t_size + meshId.length()
+	//	//	+ size_t_size /*terrain data values buffer size*/ + terrainDataValuesBufferSize
+	//	//	+ size_t_size /* numheigths */ + float_size /*min_altitude*/ + float_size /*max_altitude*/ + float16HeightmapSize + float32HeightmapSize + normalmapSize;
+	//	BYTE* streamBuffer = (BYTE*)calloc(1, streamBufferSize);
+	//	if (streamBuffer == nullptr)
+	//	{
+	//		fclose(inFile);
+	//		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Allocation error!").c_str()));
+	//	}
+	//	
+	//	// reposition to the beginning of file
+	//	int ret = fseek(inFile, 0, SEEK_SET);
+	//	if (ret != 0)
+	//	{
+	//		fclose(inFile);
+	//		::free(streamBuffer);
+	//		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("fseek to beginning of file error!").c_str()));
+	//	}
+
+	//	// bypass buffer size
+	//	if (fread(shortBuffer, size_t_size, 1, inFile) != 1)
+	//	{
+	//		fclose(inFile);
+	//		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 2!").c_str()));
+	//	}
+
+	//	size_t s = fread(streamBuffer, streamBufferSize, 1, inFile);
+
+	//	fclose(inFile);
+
+	//	buffer = std::string((char*)streamBuffer, streamBufferSize);
+	//	buffer.clear();
+	//	buffer.reserve(streamBufferSize);
+	//	buffer.append((char*)streamBuffer, streamBufferSize);
+
+	//	//m_buffer = buffer;
+	//	//m_buffer.clear();
+
+	//	::free(streamBuffer);
+	//}
+		
+	void MeshCacheBuffer::writeBufferToCache(std::string& buffer)
+	{
+		writeBufferToCache((BYTE*)buffer.c_str(), buffer.size());
+	}
+
+	void MeshCacheBuffer::writeBufferToCache(TheWorld_Utils::MemoryBuffer& buffer)
+	{
+		writeBufferToCache(buffer.ptr(), buffer.size());
+	}
+
+	void MeshCacheBuffer::writeBufferToCache(const BYTE* buffer, const size_t bufferSize)
 	{
 		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
 
@@ -587,7 +855,7 @@ namespace TheWorld_Utils
 		BYTE shortBuffer[256 + 1];
 		size_t bufferSize_size = 0;	// get size of a size_t
 
-		TheWorld_Utils::serializeToByteStream<size_t>(_buffer.size(), shortBuffer, bufferSize_size);
+		TheWorld_Utils::serializeToByteStream<size_t>(bufferSize, shortBuffer, bufferSize_size);
 
 		FILE* outFile = nullptr;
 		errno_t err = fopen_s(&outFile, tempPath.c_str(), "wb");
@@ -602,7 +870,7 @@ namespace TheWorld_Utils
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Write error 3!").c_str()));
 		}
 
-		if (fwrite(_buffer.c_str(), _buffer.size(), 1, outFile) != 1)
+		if (fwrite(buffer, bufferSize, 1, outFile) != 1)
 		{
 			fclose(outFile);
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Write error 3!").c_str()));
@@ -618,105 +886,351 @@ namespace TheWorld_Utils
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Rename error!").c_str()));
 	}
 		
+	void MeshCacheBuffer::generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, BYTE* normalsBuffer, const size_t normalsBufferSize, size_t& usedBufferSize)
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals1 1 ") + __FUNCTION__, "ALL");
+
+		usedBufferSize = 0;
+
+		size_t requiredBufferSize = vectGridHeights.size() == 0 ? sizeof(struct TheWorld_Utils::_RGB) : vectGridHeights.size() * sizeof(struct TheWorld_Utils::_RGB);
+
+		my_assert(vectGridHeights.size() == 0 || vectGridHeights.size() == numVerticesPerSize * numVerticesPerSize);
+		my_assert(normalsBufferSize >= requiredBufferSize);
+
+		struct TheWorld_Utils::_RGB* _tempNormalmapBuffer = (struct TheWorld_Utils::_RGB*)normalsBuffer;
+
+
+		if (vectGridHeights.size() > 0)
+		{
+			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals1 1.2 ") + __FUNCTION__, "generation");
+
+			size_t idx = 0;
+			for (int z = 0; z < numVerticesPerSize; z++)			// m_heightMapImage->get_height()
+			{
+				for (int x = 0; x < numVerticesPerSize; x++)		// m_heightMapImage->get_width()
+				{
+					float h = vectGridHeights[idx];
+
+					Eigen::Vector3d v;
+
+					{
+						//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals1 1.2.1 ") + __FUNCTION__, "calc vector");
+
+						// h = height of the point for which we are computing the normal
+						// hr = height of the point on the rigth
+						// hl = height of the point on the left
+						// hf = height of the forward point (z growing)
+						// hb = height of the backward point (z lessening)
+						// step = step in WUs between points
+						// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
+						// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
+						//Eigen::Vector3d P((float)x, h, (float)z);	// Verify
+						if (x < numVerticesPerSize - 1 && z < numVerticesPerSize - 1)
+						{
+							float hr = vectGridHeights[z * numVerticesPerSize + x + 1];
+							float hf = vectGridHeights[(z + 1) * numVerticesPerSize + x];
+							v = Eigen::Vector3d(h - hr, gridStepInWU, h - hf).normalized();
+							//{		// Verify
+							//	Eigen::Vector3d PR((float)(x + gridStepInWU), hr, (float)z);
+							//	Eigen::Vector3d PF((float)x, hf, (float)(z + gridStepInWU));
+							//	Eigen::Vector3d normal1 = (PF - P).cross(PR - P).normalized();
+							//	if (!equal(normal1, normal))	// DEBUGRIC
+							//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+							//}
+						}
+						else
+						{
+							if (x == numVerticesPerSize - 1 && z == 0)
+							{
+								float hf = vectGridHeights[(z + 1) * numVerticesPerSize + x];
+								float hl = vectGridHeights[z * numVerticesPerSize + x - 1];
+								v = Eigen::Vector3d(hl - h, gridStepInWU, h - hf).normalized();
+								//{		// Verify
+								//	Eigen::Vector3d PL((float)(x - gridStepInWU), hl, (float)z);
+								//	Eigen::Vector3d PF((float)x, hf, (float)(z + gridStepInWU));
+								//	Eigen::Vector3d normal1 = (PL - P).cross(PF - P).normalized();
+								//	if (!equal(normal1, normal))	// DEBUGRIC
+								//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+								//}
+							}
+							else if (x == 0 && z == numVerticesPerSize - 1)
+							{
+								float hr = vectGridHeights[z * numVerticesPerSize + x + 1];
+								float hb = vectGridHeights[(z - 1) * numVerticesPerSize + x];
+								v = Eigen::Vector3d(h - hr, gridStepInWU, hb - h).normalized();
+								//{		// Verify
+								//	Eigen::Vector3d PR((float)(x + gridStepInWU), hr, (float)z);
+								//	Eigen::Vector3d PB((float)(x), hb, (float)(z - gridStepInWU));
+								//	Eigen::Vector3d normal1 = (PR - P).cross(PB - P).normalized();
+								//	if (!equal(normal1, normal))	// DEBUGRIC
+								//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+								//}
+							}
+							else
+							{
+								float hl = vectGridHeights[z * numVerticesPerSize + x - 1];
+								float hb = vectGridHeights[(z - 1) * numVerticesPerSize + x];
+								v = Eigen::Vector3d(hl - h, gridStepInWU, hb - h).normalized();
+								//{		// Verify
+								//	Eigen::Vector3d PB((float)x, hb, (float)(z - gridStepInWU));
+								//	Eigen::Vector3d PL((float)(x - gridStepInWU), hl, (float)z);
+								//	Eigen::Vector3d normal1 = (PB - P).cross(PL - P).normalized();
+								//	if (!equal(normal1, normal))	// DEBUGRIC
+								//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+								//}
+							}
+						}
+					}
+					
+					Eigen::Vector3d normal;
+					
+					{
+						//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals1 1.2.2 ") + __FUNCTION__, "normalize");
+
+						normal = v.normalized();
+					}
+
+					{
+						//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals1 1.2.3 ") + __FUNCTION__, "RGB");
+
+						normal = 0.5 * (normal + Eigen::Vector3d(1, 1, 1));
+						struct _RGB rgb;
+						rgb.r = (BYTE)(normal.x() * 255);	// normals coord are from 0 to 1 but if expressed as color in a normlamap are from 0 to 255
+						rgb.g = (BYTE)(normal.z() * 255);
+						rgb.b = (BYTE)(normal.y() * 255);
+						/*TheWorld_Utils::serializeToByteStream<struct _RGB>(rgb, _tempNormalmapBuffer, size);
+						_tempNormalmapBuffer += size;*/
+						*_tempNormalmapBuffer = rgb;
+						_tempNormalmapBuffer++;
+					}
+
+					idx++;
+				}
+			}
+		}
+		else
+		{
+			struct _RGB rgb;
+			rgb.r = rgb.g = rgb.b = 0;
+			*_tempNormalmapBuffer = rgb;
+			_tempNormalmapBuffer++;
+		}
+
+		usedBufferSize = (BYTE*)_tempNormalmapBuffer - normalsBuffer;
+	}
+
 	void MeshCacheBuffer::generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, TheWorld_Utils::MemoryBuffer& normalsBuffer)
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals 1 ") + __FUNCTION__, "serialize normals");
+		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals2 1 ") + __FUNCTION__, "serialize normals");
 
-		my_assert(vectGridHeights.size() == numVerticesPerSize * numVerticesPerSize);
+		my_assert(vectGridHeights.size() == 0 || vectGridHeights.size() == numVerticesPerSize * numVerticesPerSize);
 
-		size_t bufferSize = vectGridHeights.size() * sizeof(struct TheWorld_Utils::_RGB);
-		normalsBuffer.reserve(bufferSize);
-		struct TheWorld_Utils::_RGB* _tempNormalmapBuffer = (struct TheWorld_Utils::_RGB*)normalsBuffer.ptr();
+		size_t requiredBufferSize = vectGridHeights.size() == 0 ? sizeof(struct TheWorld_Utils::_RGB) : vectGridHeights.size() * sizeof(struct TheWorld_Utils::_RGB);
 
-		
-		size_t idx = 0;
-		for (int z = 0; z < numVerticesPerSize; z++)			// m_heightMapImage->get_height()
+		normalsBuffer.reserve(requiredBufferSize);
+
+		size_t usedBufferSize = 0;
+		generateNormals(numVerticesPerSize, gridStepInWU, vectGridHeights, normalsBuffer.ptr(), normalsBuffer.reserved(), usedBufferSize);
+
+		normalsBuffer.adjustSize(usedBufferSize);
+	}
+
+	//void MeshCacheBuffer::generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, TheWorld_Utils::MemoryBuffer& normalsBuffer)
+	//{
+	//	TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals2 1 ") + __FUNCTION__, "serialize normals");
+
+	//	my_assert(vectGridHeights.size() == numVerticesPerSize * numVerticesPerSize);
+
+	//	size_t bufferSize = vectGridHeights.size() * sizeof(struct TheWorld_Utils::_RGB);
+	//	normalsBuffer.reserve(bufferSize);
+	//	struct TheWorld_Utils::_RGB* _tempNormalmapBuffer = (struct TheWorld_Utils::_RGB*)normalsBuffer.ptr();
+
+	//	
+	//	size_t idx = 0;
+	//	for (int z = 0; z < numVerticesPerSize; z++)			// m_heightMapImage->get_height()
+	//	{
+	//		for (int x = 0; x < numVerticesPerSize; x++)		// m_heightMapImage->get_width()
+	//		{
+	//			float h = vectGridHeights[idx];
+
+	//			// h = height of the point for which we are computing the normal
+	//			// hr = height of the point on the rigth
+	//			// hl = height of the point on the left
+	//			// hf = height of the forward point (z growing)
+	//			// hb = height of the backward point (z lessening)
+	//			// step = step in WUs between points
+	//			// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
+	//			// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
+	//			Eigen::Vector3d normal;
+	//			//Eigen::Vector3d P((float)x, h, (float)z);	// Verify
+	//			if (x < numVerticesPerSize - 1 && z < numVerticesPerSize - 1)
+	//			{
+	//				float hr = vectGridHeights[z * numVerticesPerSize + x + 1];
+	//				float hf = vectGridHeights[(z + 1) * numVerticesPerSize + x];
+	//				normal = Eigen::Vector3d(h - hr, gridStepInWU, h - hf).normalized();
+	//				//{		// Verify
+	//				//	Eigen::Vector3d PR((float)(x + gridStepInWU), hr, (float)z);
+	//				//	Eigen::Vector3d PF((float)x, hf, (float)(z + gridStepInWU));
+	//				//	Eigen::Vector3d normal1 = (PF - P).cross(PR - P).normalized();
+	//				//	if (!equal(normal1, normal))	// DEBUGRIC
+	//				//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+	//				//}
+	//			}
+	//			else
+	//			{
+	//				if (x == numVerticesPerSize - 1 && z == 0)
+	//				{
+	//					float hf = vectGridHeights[(z + 1) * numVerticesPerSize + x];
+	//					float hl = vectGridHeights[z * numVerticesPerSize + x - 1];
+	//					normal = Eigen::Vector3d(hl - h, gridStepInWU, h - hf).normalized();
+	//					//{		// Verify
+	//					//	Eigen::Vector3d PL((float)(x - gridStepInWU), hl, (float)z);
+	//					//	Eigen::Vector3d PF((float)x, hf, (float)(z + gridStepInWU));
+	//					//	Eigen::Vector3d normal1 = (PL - P).cross(PF - P).normalized();
+	//					//	if (!equal(normal1, normal))	// DEBUGRIC
+	//					//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+	//					//}
+	//				}
+	//				else if (x == 0 && z == numVerticesPerSize - 1)
+	//				{
+	//					float hr = vectGridHeights[z * numVerticesPerSize + x + 1];
+	//					float hb = vectGridHeights[(z - 1) * numVerticesPerSize + x];
+	//					normal = Eigen::Vector3d(h - hr, gridStepInWU, hb - h).normalized();
+	//					//{		// Verify
+	//					//	Eigen::Vector3d PR((float)(x + gridStepInWU), hr, (float)z);
+	//					//	Eigen::Vector3d PB((float)(x), hb, (float)(z - gridStepInWU));
+	//					//	Eigen::Vector3d normal1 = (PR - P).cross(PB - P).normalized();
+	//					//	if (!equal(normal1, normal))	// DEBUGRIC
+	//					//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+	//					//}
+	//				}
+	//				else
+	//				{
+	//					float hl = vectGridHeights[z * numVerticesPerSize + x - 1];
+	//					float hb = vectGridHeights[(z - 1) * numVerticesPerSize + x];
+	//					normal = Eigen::Vector3d(hl - h, gridStepInWU, hb - h).normalized();
+	//					//{		// Verify
+	//					//	Eigen::Vector3d PB((float)x, hb, (float)(z - gridStepInWU));
+	//					//	Eigen::Vector3d PL((float)(x - gridStepInWU), hl, (float)z);
+	//					//	Eigen::Vector3d normal1 = (PB - P).cross(PL - P).normalized();
+	//					//	if (!equal(normal1, normal))	// DEBUGRIC
+	//					//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+	//					//}
+	//				}
+	//			}
+
+	//			normal = 0.5 * (normal + Eigen::Vector3d(1, 1, 1));
+	//			struct _RGB rgb;
+	//			rgb.r = (BYTE)(normal.x() * 255);	// normals coord are from 0 to 1 but if expressed as color in a normlamap are from 0 to 255
+	//			rgb.g = (BYTE)(normal.z() * 255);
+	//			rgb.b = (BYTE)(normal.y() * 255);
+	//			/*TheWorld_Utils::serializeToByteStream<struct _RGB>(rgb, _tempNormalmapBuffer, size);
+	//			_tempNormalmapBuffer += size;*/
+	//			*_tempNormalmapBuffer = rgb;
+	//			_tempNormalmapBuffer++;
+
+	//			idx++;
+	//		}
+	//	}
+
+	//	normalsBuffer.adjustSize(bufferSize);
+	//}
+
+	void MeshCacheBuffer::setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, TheWorld_Utils::MemoryBuffer& buffer)
+	{
+		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1 ") + __FUNCTION__, "ALL");
+
+		size_t size = 0;
+
+		size_t numHeights16 = cacheData.heights16Buffer->size() / sizeof(uint16_t);
+		assert(cacheData.heights16Buffer->size() == numHeights16 * sizeof(uint16_t));
+		size_t numHeights32 = cacheData.heights32Buffer->size() / sizeof(float);
+		assert(cacheData.heights32Buffer->size() == numHeights32 * sizeof(float));
+		size_t numNormals = cacheData.normalsBuffer->size() / sizeof(TheWorld_Utils::_RGB);
+		assert(cacheData.normalsBuffer->size() == numNormals * sizeof(TheWorld_Utils::_RGB));
+
+		my_assert(numHeights16 == 0 || numHeights16 == numVerticesPerSize * numVerticesPerSize);
+		my_assert(numHeights16 == numHeights32);
+		my_assert(numNormals == 0 || numNormals == numVerticesPerSize * numVerticesPerSize);
+
+		size_t float16HeightmapSize = numHeights16 * sizeof(uint16_t);
+		size_t float32HeightmapSize = numHeights32 * sizeof(float);
+		size_t normalmapSize = numNormals > 0 ? numNormals * sizeof(TheWorld_Utils::_RGB) : sizeof(TheWorld_Utils::_RGB);
+		size_t streamBufferSize = 1 /* "0" */
+			+ sizeof(size_t) + cacheData.meshId.length()
+			+ sizeof(size_t) + cacheData.terrainEditValues->size()
+			+ sizeof(size_t); /* numheigths */
+		if (numHeights16 > 0)
 		{
-			for (int x = 0; x < numVerticesPerSize; x++)		// m_heightMapImage->get_width()
+			streamBufferSize = streamBufferSize
+				+ sizeof(float) /*min_altitude*/ 
+				+ sizeof(float) /*max_altitude*/ 
+				+ float16HeightmapSize 
+				+ float32HeightmapSize 
+				+ normalmapSize;
+		}
+		
+		buffer.reserve(streamBufferSize);
+		BYTE* _streamBuffer = buffer.ptr();
+
+		{
+			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1.1 ") + __FUNCTION__, "meshId/edit values");
+
+			memcpy(_streamBuffer, "0", 1);
+			_streamBuffer++;
+
+			TheWorld_Utils::serializeToByteStream<size_t>(cacheData.meshId.length(), _streamBuffer, size);
+			_streamBuffer += size;
+
+			memcpy(_streamBuffer, cacheData.meshId.c_str(), cacheData.meshId.length());
+			_streamBuffer += cacheData.meshId.length();
+
+			TheWorld_Utils::serializeToByteStream<size_t>(cacheData.terrainEditValues->size(), _streamBuffer, size);
+			_streamBuffer += size;
+
+			if (cacheData.terrainEditValues->size() > 0)
 			{
-				float h = vectGridHeights[idx];
-
-				// h = height of the point for which we are computing the normal
-				// hr = height of the point on the rigth
-				// hl = height of the point on the left
-				// hf = height of the forward point (z growing)
-				// hb = height of the backward point (z lessening)
-				// step = step in WUs between points
-				// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
-				// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
-				Eigen::Vector3d normal;
-				//Eigen::Vector3d P((float)x, h, (float)z);	// Verify
-				if (x < numVerticesPerSize - 1 && z < numVerticesPerSize - 1)
-				{
-					float hr = vectGridHeights[z * numVerticesPerSize + x + 1];
-					float hf = vectGridHeights[(z + 1) * numVerticesPerSize + x];
-					normal = Eigen::Vector3d(h - hr, gridStepInWU, h - hf).normalized();
-					//{		// Verify
-					//	Eigen::Vector3d PR((float)(x + gridStepInWU), hr, (float)z);
-					//	Eigen::Vector3d PF((float)x, hf, (float)(z + gridStepInWU));
-					//	Eigen::Vector3d normal1 = (PF - P).cross(PR - P).normalized();
-					//	if (!equal(normal1, normal))	// DEBUGRIC
-					//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-					//}
-				}
-				else
-				{
-					if (x == numVerticesPerSize - 1 && z == 0)
-					{
-						float hf = vectGridHeights[(z + 1) * numVerticesPerSize + x];
-						float hl = vectGridHeights[z * numVerticesPerSize + x - 1];
-						normal = Eigen::Vector3d(hl - h, gridStepInWU, h - hf).normalized();
-						//{		// Verify
-						//	Eigen::Vector3d PL((float)(x - gridStepInWU), hl, (float)z);
-						//	Eigen::Vector3d PF((float)x, hf, (float)(z + gridStepInWU));
-						//	Eigen::Vector3d normal1 = (PL - P).cross(PF - P).normalized();
-						//	if (!equal(normal1, normal))	// DEBUGRIC
-						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-						//}
-					}
-					else if (x == 0 && z == numVerticesPerSize - 1)
-					{
-						float hr = vectGridHeights[z * numVerticesPerSize + x + 1];
-						float hb = vectGridHeights[(z - 1) * numVerticesPerSize + x];
-						normal = Eigen::Vector3d(h - hr, gridStepInWU, hb - h).normalized();
-						//{		// Verify
-						//	Eigen::Vector3d PR((float)(x + gridStepInWU), hr, (float)z);
-						//	Eigen::Vector3d PB((float)(x), hb, (float)(z - gridStepInWU));
-						//	Eigen::Vector3d normal1 = (PR - P).cross(PB - P).normalized();
-						//	if (!equal(normal1, normal))	// DEBUGRIC
-						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-						//}
-					}
-					else
-					{
-						float hl = vectGridHeights[z * numVerticesPerSize + x - 1];
-						float hb = vectGridHeights[(z - 1) * numVerticesPerSize + x];
-						normal = Eigen::Vector3d(hl - h, gridStepInWU, hb - h).normalized();
-						//{		// Verify
-						//	Eigen::Vector3d PB((float)x, hb, (float)(z - gridStepInWU));
-						//	Eigen::Vector3d PL((float)(x - gridStepInWU), hl, (float)z);
-						//	Eigen::Vector3d normal1 = (PB - P).cross(PL - P).normalized();
-						//	if (!equal(normal1, normal))	// DEBUGRIC
-						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-						//}
-					}
-				}
-
-				normal = 0.5 * (normal + Eigen::Vector3d(1, 1, 1));
-				struct _RGB rgb;
-				rgb.r = (BYTE)(normal.x() * 255);	// normals coord are from 0 to 1 but if expressed as color in a normlamap are from 0 to 255
-				rgb.g = (BYTE)(normal.z() * 255);
-				rgb.b = (BYTE)(normal.y() * 255);
-				/*TheWorld_Utils::serializeToByteStream<struct _RGB>(rgb, _tempNormalmapBuffer, size);
-				_tempNormalmapBuffer += size;*/
-				*_tempNormalmapBuffer = rgb;
-				_tempNormalmapBuffer++;
-
-				idx++;
+				memcpy(_streamBuffer, cacheData.terrainEditValues->ptr(), cacheData.terrainEditValues->size());
+				_streamBuffer += cacheData.terrainEditValues->size();
 			}
 		}
 
-		normalsBuffer.adjustSize(bufferSize);
+		size = 0;
+		TheWorld_Utils::serializeToByteStream<size_t>(numHeights16, _streamBuffer, size);
+		_streamBuffer += size;
+
+		if (numHeights16 > 0)
+		{
+			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1.2 ") + __FUNCTION__, "meshId/edit values");
+
+			TheWorld_Utils::serializeToByteStream<float>(cacheData.minHeight, _streamBuffer, size);
+			_streamBuffer += size;
+
+			TheWorld_Utils::serializeToByteStream<float>(cacheData.maxHeight, _streamBuffer, size);
+			_streamBuffer += size;
+
+			memcpy(_streamBuffer, cacheData.heights16Buffer->ptr(), float16HeightmapSize);
+			_streamBuffer += float16HeightmapSize;
+
+			memcpy(_streamBuffer, cacheData.heights32Buffer->ptr(), float32HeightmapSize);
+			_streamBuffer += float32HeightmapSize;
+
+			if (numNormals > 0)
+			{
+				memcpy(_streamBuffer, cacheData.normalsBuffer->ptr(), normalmapSize);
+				_streamBuffer += normalmapSize;
+			}
+			else
+			{
+				struct TheWorld_Utils::_RGB rgb;
+				rgb.r = rgb.g = rgb.b = 0;
+				memcpy(_streamBuffer, (BYTE*)&rgb, sizeof(struct TheWorld_Utils::_RGB));
+				_streamBuffer += sizeof(struct TheWorld_Utils::_RGB);
+			}
+		}
+
+		assert(_streamBuffer - buffer.ptr() == streamBufferSize);
+		buffer.adjustSize(streamBufferSize);
 	}
 
 	void MeshCacheBuffer::setBufferFromHeights(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude, bool generateNormals)
@@ -737,7 +1251,7 @@ namespace TheWorld_Utils
 		size_t vectSize = vectGridHeights.size();
 		size_t float16HeightmapSize = vectSize * uint16_t_size;
 		size_t float32HeightmapSize = vectSize * float_size;
-		size_t normalmapSize = vectSize * sizeof(struct _RGB);
+		size_t normalmapSize = generateNormals ? vectSize * sizeof(struct _RGB) : sizeof(struct _RGB);
 		size_t streamBufferSize = 1 /* "0" */ 
 			+ size_t_size + meshId.length()
 			+ size_t_size + terrainEditValuesBuffer.size()
@@ -848,108 +1362,118 @@ namespace TheWorld_Utils
 					}
 				}
 
+				std::vector<float> heigthsEmptyVector;
+				std::vector<float>* heigthsVectorPointer = &heigthsEmptyVector;
 				if (generateNormals)
-				{
-					//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer SetBuffer 1.3.2 ") + __FUNCTION__, "serialize normals");
+					heigthsVectorPointer = &vectGridHeights;
 
-					idx = 0;
-					for (int z = 0; z < numVerticesPerSize; z++)			// m_heightMapImage->get_height()
-					{
-						for (int x = 0; x < numVerticesPerSize; x++)		// m_heightMapImage->get_width()
-						{
-							float h = vectGridHeights[idx];
+				size_t usedBufferSize = 0;
+				this->generateNormals(numVerticesPerSize, gridStepInWU, *heigthsVectorPointer, (BYTE*)_tempNormalmapBuffer, normalmapSize, usedBufferSize);
+				_tempNormalmapBuffer = (struct TheWorld_Utils::_RGB*)((BYTE*)_tempNormalmapBuffer + usedBufferSize);
+				my_assert(normalmapSize == usedBufferSize);
 
-							// h = height of the point for which we are computing the normal
-							// hr = height of the point on the rigth
-							// hl = height of the point on the left
-							// hf = height of the forward point (z growing)
-							// hb = height of the backward point (z lessening)
-							// step = step in WUs between points
-							// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
-							// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
-							Eigen::Vector3d normal;
-							//Eigen::Vector3d P((float)x, h, (float)z);	// Verify
-							if (x < numVerticesPerSize - 1 && z < numVerticesPerSize - 1)
-							{
-								float hr = vectGridHeights[z * numVerticesPerSize + x + 1];
-								float hf = vectGridHeights[(z + 1) * numVerticesPerSize + x];
-								normal = Eigen::Vector3d(h - hr, gridStepInWU, h - hf).normalized();
-								//{		// Verify
-								//	Eigen::Vector3d PR((float)(x + gridStepInWU), hr, (float)z);
-								//	Eigen::Vector3d PF((float)x, hf, (float)(z + gridStepInWU));
-								//	Eigen::Vector3d normal1 = (PF - P).cross(PR - P).normalized();
-								//	if (!equal(normal1, normal))	// DEBUGRIC
-								//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-								//}
-							}
-							else
-							{
-								if (x == numVerticesPerSize - 1 && z == 0)
-								{
-									float hf = vectGridHeights[(z + 1) * numVerticesPerSize + x];
-									float hl = vectGridHeights[z * numVerticesPerSize + x - 1];
-									normal = Eigen::Vector3d(hl - h, gridStepInWU, h - hf).normalized();
-									//{		// Verify
-									//	Eigen::Vector3d PL((float)(x - gridStepInWU), hl, (float)z);
-									//	Eigen::Vector3d PF((float)x, hf, (float)(z + gridStepInWU));
-									//	Eigen::Vector3d normal1 = (PL - P).cross(PF - P).normalized();
-									//	if (!equal(normal1, normal))	// DEBUGRIC
-									//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-									//}
-								}
-								else if (x == 0 && z == numVerticesPerSize - 1)
-								{
-									float hr = vectGridHeights[z * numVerticesPerSize + x + 1];
-									float hb = vectGridHeights[(z - 1) * numVerticesPerSize + x];
-									normal = Eigen::Vector3d(h - hr, gridStepInWU, hb - h).normalized();
-									//{		// Verify
-									//	Eigen::Vector3d PR((float)(x + gridStepInWU), hr, (float)z);
-									//	Eigen::Vector3d PB((float)(x), hb, (float)(z - gridStepInWU));
-									//	Eigen::Vector3d normal1 = (PR - P).cross(PB - P).normalized();
-									//	if (!equal(normal1, normal))	// DEBUGRIC
-									//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-									//}
-								}
-								else
-								{
-									float hl = vectGridHeights[z * numVerticesPerSize + x - 1];
-									float hb = vectGridHeights[(z - 1) * numVerticesPerSize + x];
-									normal = Eigen::Vector3d(hl - h, gridStepInWU, hb - h).normalized();
-									//{		// Verify
-									//	Eigen::Vector3d PB((float)x, hb, (float)(z - gridStepInWU));
-									//	Eigen::Vector3d PL((float)(x - gridStepInWU), hl, (float)z);
-									//	Eigen::Vector3d normal1 = (PB - P).cross(PL - P).normalized();
-									//	if (!equal(normal1, normal))	// DEBUGRIC
-									//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-									//}
-								}
-							}
+				//if (generateNormals)
+				//{
+				//	//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer SetBuffer 1.3.2 ") + __FUNCTION__, "serialize normals");
 
-							normal = 0.5 * (normal + Eigen::Vector3d(1, 1, 1));
-							struct _RGB rgb;
-							rgb.r = (BYTE)(normal.x() * 255);	// normals coord are from 0 to 1 but if expressed as color in a normlamap are from 0 to 255
-							rgb.g = (BYTE)(normal.z() * 255);
-							rgb.b = (BYTE)(normal.y() * 255);
-							/*TheWorld_Utils::serializeToByteStream<struct _RGB>(rgb, _tempNormalmapBuffer, size);
-							_tempNormalmapBuffer += size;*/
-							*_tempNormalmapBuffer = rgb;
-							_tempNormalmapBuffer++;
+				//	idx = 0;
+				//	for (int z = 0; z < numVerticesPerSize; z++)			// m_heightMapImage->get_height()
+				//	{
+				//		for (int x = 0; x < numVerticesPerSize; x++)		// m_heightMapImage->get_width()
+				//		{
+				//			float h = vectGridHeights[idx];
 
-							idx++;
-						}
-					}
-				}
-				else
-				{
-					struct _RGB rgb;
-					rgb.r = rgb.g = rgb.b = 0;
-					*_tempNormalmapBuffer = rgb;
-					_tempNormalmapBuffer++;
+				//			// h = height of the point for which we are computing the normal
+				//			// hr = height of the point on the rigth
+				//			// hl = height of the point on the left
+				//			// hf = height of the forward point (z growing)
+				//			// hb = height of the backward point (z lessening)
+				//			// step = step in WUs between points
+				//			// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
+				//			// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
+				//			Eigen::Vector3d normal;
+				//			//Eigen::Vector3d P((float)x, h, (float)z);	// Verify
+				//			if (x < numVerticesPerSize - 1 && z < numVerticesPerSize - 1)
+				//			{
+				//				float hr = vectGridHeights[z * numVerticesPerSize + x + 1];
+				//				float hf = vectGridHeights[(z + 1) * numVerticesPerSize + x];
+				//				normal = Eigen::Vector3d(h - hr, gridStepInWU, h - hf).normalized();
+				//				//{		// Verify
+				//				//	Eigen::Vector3d PR((float)(x + gridStepInWU), hr, (float)z);
+				//				//	Eigen::Vector3d PF((float)x, hf, (float)(z + gridStepInWU));
+				//				//	Eigen::Vector3d normal1 = (PF - P).cross(PR - P).normalized();
+				//				//	if (!equal(normal1, normal))	// DEBUGRIC
+				//				//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+				//				//}
+				//			}
+				//			else
+				//			{
+				//				if (x == numVerticesPerSize - 1 && z == 0)
+				//				{
+				//					float hf = vectGridHeights[(z + 1) * numVerticesPerSize + x];
+				//					float hl = vectGridHeights[z * numVerticesPerSize + x - 1];
+				//					normal = Eigen::Vector3d(hl - h, gridStepInWU, h - hf).normalized();
+				//					//{		// Verify
+				//					//	Eigen::Vector3d PL((float)(x - gridStepInWU), hl, (float)z);
+				//					//	Eigen::Vector3d PF((float)x, hf, (float)(z + gridStepInWU));
+				//					//	Eigen::Vector3d normal1 = (PL - P).cross(PF - P).normalized();
+				//					//	if (!equal(normal1, normal))	// DEBUGRIC
+				//					//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+				//					//}
+				//				}
+				//				else if (x == 0 && z == numVerticesPerSize - 1)
+				//				{
+				//					float hr = vectGridHeights[z * numVerticesPerSize + x + 1];
+				//					float hb = vectGridHeights[(z - 1) * numVerticesPerSize + x];
+				//					normal = Eigen::Vector3d(h - hr, gridStepInWU, hb - h).normalized();
+				//					//{		// Verify
+				//					//	Eigen::Vector3d PR((float)(x + gridStepInWU), hr, (float)z);
+				//					//	Eigen::Vector3d PB((float)(x), hb, (float)(z - gridStepInWU));
+				//					//	Eigen::Vector3d normal1 = (PR - P).cross(PB - P).normalized();
+				//					//	if (!equal(normal1, normal))	// DEBUGRIC
+				//					//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+				//					//}
+				//				}
+				//				else
+				//				{
+				//					float hl = vectGridHeights[z * numVerticesPerSize + x - 1];
+				//					float hb = vectGridHeights[(z - 1) * numVerticesPerSize + x];
+				//					normal = Eigen::Vector3d(hl - h, gridStepInWU, hb - h).normalized();
+				//					//{		// Verify
+				//					//	Eigen::Vector3d PB((float)x, hb, (float)(z - gridStepInWU));
+				//					//	Eigen::Vector3d PL((float)(x - gridStepInWU), hl, (float)z);
+				//					//	Eigen::Vector3d normal1 = (PB - P).cross(PL - P).normalized();
+				//					//	if (!equal(normal1, normal))	// DEBUGRIC
+				//					//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+				//					//}
+				//				}
+				//			}
 
-					streamBufferSize -= normalmapSize;
-					normalmapSize = sizeof(struct _RGB);
-					streamBufferSize += normalmapSize;
-				}
+				//			normal = 0.5 * (normal + Eigen::Vector3d(1, 1, 1));
+				//			struct _RGB rgb;
+				//			rgb.r = (BYTE)(normal.x() * 255);	// normals coord are from 0 to 1 but if expressed as color in a normlamap are from 0 to 255
+				//			rgb.g = (BYTE)(normal.z() * 255);
+				//			rgb.b = (BYTE)(normal.y() * 255);
+				//			/*TheWorld_Utils::serializeToByteStream<struct _RGB>(rgb, _tempNormalmapBuffer, size);
+				//			_tempNormalmapBuffer += size;*/
+				//			*_tempNormalmapBuffer = rgb;
+				//			_tempNormalmapBuffer++;
+
+				//			idx++;
+				//		}
+				//	}
+				//}
+				//else
+				//{
+				//	struct _RGB rgb;
+				//	rgb.r = rgb.g = rgb.b = 0;
+				//	*_tempNormalmapBuffer = rgb;
+				//	_tempNormalmapBuffer++;
+
+				//	//streamBufferSize -= normalmapSize;
+				//	//normalmapSize = sizeof(struct _RGB);
+				//	//streamBufferSize += normalmapSize;
+				//}
 
 				{
 					//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer SetBuffer 1.3.3 ") + __FUNCTION__, "memcpy");
