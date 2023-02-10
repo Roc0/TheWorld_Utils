@@ -24,10 +24,6 @@
 #include <plog/Log.h>
 #include "gsl\assert"
 
-//#include <Godot.hpp>
-//#include <Vector3.hpp>
-//#include <boost/algorithm/string.hpp>
-
 #define Vector3Zero Vector3(0, 0, 0)
 #define Vector3UP Vector3(0, 1, 0)
 
@@ -73,7 +69,6 @@ namespace TheWorld_Utils
 		__declspec(dllexport) size_t reserved(void);
 		__declspec(dllexport) void reset(void);
 		__declspec(dllexport) BYTE* ptr();
-		//__declspec(dllexport) size_t len(void);
 		__declspec(dllexport) size_t size(void);
 		__declspec(dllexport) bool empty(void);
 		__declspec(dllexport) void clear(void);
@@ -232,6 +227,8 @@ namespace TheWorld_Utils
 
 		__declspec(dllexport) void operator=(const MeshCacheBuffer& c);
 
+		__declspec(dllexport) static std::string generateNewMeshId(void);
+		__declspec(dllexport) static bool firstMeshIdMoreRecent(std::string firstMeshId, std::string secondMeshId);
 		__declspec(dllexport) std::string getMeshIdFromCache(void);
 		__declspec(dllexport) void refreshMapsFromCache(std::string meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer);
 		__declspec(dllexport) void refreshMapsFromBuffer(const BYTE* buffer, const size_t bufferSize, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache);
@@ -256,21 +253,6 @@ namespace TheWorld_Utils
 			return m_meshId;
 		}
 
-//#ifdef _THEWORLD_CLIENT
-//		//void writeHeightmap(godot::Ref<godot::Image> heightMapImage);
-//		//void writeNormalmap(godot::Ref<godot::Image> normalMapImage);
-//		//godot::Ref<godot::Image> readHeigthmap(bool& ok);
-//		//godot::Ref<godot::Image> readNormalmap(bool& ok);
-//		enum class ImageType
-//		{
-//			heightmap = 0,
-//			normalmap = 1
-//		};
-//
-//		__declspec(dllexport) void writeImage(godot::Ref<godot::Image> image, enum class ImageType type);
-//		__declspec(dllexport) godot::Ref<godot::Image> readImage(bool& ok, enum class ImageType type);
-//#endif
-
 	private:
 		std::string m_meshFilePath;
 		std::string m_cacheDir;
@@ -281,11 +263,6 @@ namespace TheWorld_Utils
 		int m_level;
 		float m_lowerXGridVertex;
 		float m_lowerZGridVertex;
-
-//#ifdef _THEWORLD_CLIENT
-//		std::string m_heightmapFilePath;
-//		std::string m_normalmapFilePath;
-//#endif
 	};
 	
 	std::string ToString(GUID* guid);
@@ -439,9 +416,20 @@ namespace TheWorld_Utils
 			return fabs(f) <= epsilon;
 		}
 
+		
 		// Robust floating point comparisons:
 		// http://realtimecollisiondetection.net/blog/?p=89
 		//static bool equal(const float f0, const float f1, const float epsilon = 0.00001);
+		static std::vector<std::string> split(std::string text, char delim)
+		{
+			std::string line;
+			std::vector<std::string> vec;
+			std::stringstream ss(text);
+			while (std::getline(ss, line, delim)) {
+				vec.push_back(line);
+			}
+			return vec;
+		}
 	};
 
 	class GDN_TheWorld_Exception : public std::exception
