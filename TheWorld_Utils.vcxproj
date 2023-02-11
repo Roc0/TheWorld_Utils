@@ -157,6 +157,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="FastNoiseLite.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="half.h" />
     <ClInclude Include="pch.h" />

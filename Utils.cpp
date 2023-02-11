@@ -21,11 +21,63 @@
 #include <plog/Initializers/RollingFileInitializer.h>
 #include <Eigen/Dense>
 #include <Rpc.h>
+#include <cmath>
+#include "FastNoiseLite.h"
 
 namespace fs = std::filesystem;
 
 namespace TheWorld_Utils
 {
+	TerrainEdit::TerrainEdit(void)
+	{
+		size = sizeof(TerrainEdit);
+		needUploadToServer = false;
+
+		noiseType = FastNoiseLite::NoiseType::NoiseType_Perlin;
+		rotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+		noiseSeed = 1337;
+		frequency = 0.0005f;
+		fractalType = FastNoiseLite::FractalType::FractalType_FBm;
+		fractalOctaves = 5;
+		fractalLacunarity = 2.0f;
+		fractalGain = 0.5f;
+		fractalWeightedStrength = 0.0f;
+		fractalPingPongStrength = 2.0f;
+
+		cellularDistanceFunction = FastNoiseLite::CellularDistanceFunction::CellularDistanceFunction_EuclideanSq;
+		cellularReturnType = FastNoiseLite::CellularReturnType::CellularReturnType_Distance;
+		cellularJitter = 1.0f;
+
+		warpNoiseDomainWarpType = -1;
+		warpNoiseRotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+		warpNoiseSeed = 1337;
+		warpNoiseDomainWarpAmp = 30.0f;
+		warpNoiseFrequency = 0.005f;
+		warpNoieseFractalType = FastNoiseLite::FractalType::FractalType_None;
+		warpNoiseFractalOctaves = 5;
+		warpNoiseFractalLacunarity = 2.0f;
+		warpNoiseFractalGain = 0.5f;
+
+		amplitude = 1000;
+		minHeight = 0;
+		maxHeight = 0;
+	}
+
+	void TerrainEdit::serialize(TheWorld_Utils::MemoryBuffer& buffer)
+	{
+		buffer.reserve(sizeof(TerrainEdit));
+		buffer.set((BYTE*)this, sizeof(TerrainEdit));
+	}
+
+	void TerrainEdit::deserialize(TheWorld_Utils::MemoryBuffer& buffer)
+	{
+		size_t minLen = (buffer.size() <= size ? buffer.size() : size);
+		//assert(buffer.len() == sizeof(TerrainEdit));
+		size_t saveSize = size;
+		memcpy(this, buffer.ptr(), minLen);
+		size = saveSize;
+	}
+
 	MemoryBuffer::MemoryBuffer(void)
 	{
 		m_ptr = nullptr;
@@ -370,33 +422,43 @@ namespace TheWorld_Utils
 		return m_meshId;
 	}
 
-	void MeshCacheBuffer::refreshMapsFromCache(std::string _meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer)
+	bool MeshCacheBuffer::refreshMapsFromCache(std::string _meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("refreshMapsFromCache 1 ") + __FUNCTION__, "ALL");
 
 		TheWorld_Utils::MemoryBuffer buffer;
-		std::string meshIdFromBuffer;
 
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("refreshMapsFromCache 1.1  ") + __FUNCTION__, "readBufferFromCache");
 			readBufferFromCache(_meshId, buffer);
 		}
 
+		if (buffer.size() == 0)
+			return false;
+
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("refreshMapsFromCache 1.2  ") + __FUNCTION__, "refreshMapsFromBuffer");
+			std::string meshIdFromBuffer;
 			refreshMapsFromBuffer(buffer, meshIdFromBuffer, terrainEditValues, minAltitude, maxAltitude, float16HeigthsBuffer, float32HeigthsBuffer, normalsBuffer, false);
+			assert(meshIdFromBuffer == _meshId);
+			if (meshIdFromBuffer != _meshId)
+			{
+				throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("meshId from cache buffer (") + meshIdFromBuffer + ") not equal to meshId in input (" + _meshId).c_str()));
+			}
 		}
-		
-		assert(meshIdFromBuffer == _meshId);
-		if (meshIdFromBuffer != _meshId)
-		{
-			throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("meshId from cache buffer (") + meshIdFromBuffer + ") not equal to meshId in input (" + _meshId).c_str()));
-		}
+
+		return true;
 	}
 
 	void MeshCacheBuffer::refreshMapsFromBuffer(const BYTE* buffer, const size_t bufferSize, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache)
 	{
 		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+
+		if (bufferSize == 0)
+		{
+			meshIdFromBuffer.clear();
+			return;
+		}
 
 		size_t size = 0;
 
@@ -490,7 +552,8 @@ namespace TheWorld_Utils
 
 		// read vertices from local cache
 		if (!fs::exists(m_meshFilePath))
-			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("not found current quadrant in cache").c_str()));
+			return;
+			//throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("not found current quadrant in cache").c_str()));
 
 		size_t size_t_size = sizeof(size_t);	// get size of a size_t
 		size_t uint16_t_size = sizeof(uint16_t);	// the size of an half ==> float_16
@@ -776,6 +839,15 @@ namespace TheWorld_Utils
 		normalsBuffer.adjustSize(usedBufferSize);
 	}
 
+	void MeshCacheBuffer::setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, std::string& buffer)
+	{
+		TheWorld_Utils::MemoryBuffer _buffer;
+		setBufferFromCacheData(numVerticesPerSize, gridStepInWU, cacheData, _buffer);
+		buffer.clear();
+		buffer.reserve(_buffer.size());
+		buffer.assign((char*)_buffer.ptr(), _buffer.size());
+	}
+
 	void MeshCacheBuffer::setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, TheWorld_Utils::MemoryBuffer& buffer)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1 ") + __FUNCTION__, "ALL");
@@ -815,14 +887,41 @@ namespace TheWorld_Utils
 			float* _float32HeightsBuffer = (float*)flatFloat32HeightsBuffer.ptr();
 			TheWorld_Utils::FLOAT_32 f(0.0f);
 			uint16_t empyHalf = half_from_float(f.u32);
-			for (size_t z = 0; z < numVerticesPerSize; z++)
-				for (size_t x = 0; x < numVerticesPerSize; x++)
-				{
-					*_float16HeightsBuffer = empyHalf;
-					_float16HeightsBuffer++;
-					*_float32HeightsBuffer = 0.0f;
-					_float32HeightsBuffer++;
-				}
+			{		// first impl.
+				for (size_t z = 0; z < numVerticesPerSize; z++)
+					for (size_t x = 0; x < numVerticesPerSize; x++)
+					{
+						*_float16HeightsBuffer = empyHalf;
+						_float16HeightsBuffer++;
+						*_float32HeightsBuffer = 0.0f;
+						_float32HeightsBuffer++;
+					}
+			}
+			//{		// second impl.
+			//	BYTE* _float16HeightsBufferBegin = (BYTE*)_float16HeightsBuffer;
+			//	BYTE* _float32HeightsBufferBegin = (BYTE*)_float32HeightsBuffer;
+			//	size_t numVerticesPerSizeMinusOne = numVerticesPerSize - 1;
+			//	assert(TheWorld_Utils::Utils::isPowerOfTwo(int(numVerticesPerSizeMinusOne)));
+			//	size_t exponent = (size_t)log2(numVerticesPerSizeMinusOne * numVerticesPerSizeMinusOne);
+			//	*_float16HeightsBuffer = empyHalf;
+			//	_float16HeightsBuffer++; 
+			//	*_float32HeightsBuffer = 0.0f;
+			//	_float32HeightsBuffer++;
+			//	for (int i = 0; i < exponent; i++)
+			//	{
+			//		size_t length16 = (BYTE*)_float16HeightsBuffer - _float16HeightsBufferBegin;
+			//		size_t length32 = (BYTE*)_float32HeightsBuffer - _float32HeightsBufferBegin;
+			//		memcpy(_float16HeightsBuffer, _float16HeightsBufferBegin, length16);
+			//		_float16HeightsBuffer = (uint16_t*)((BYTE*)_float16HeightsBuffer + length16);
+			//		memcpy(_float32HeightsBuffer, _float32HeightsBufferBegin, length32);
+			//		_float32HeightsBuffer = (float*)((BYTE*)_float32HeightsBuffer + length32);
+			//	}
+			//	size_t remaining = (numVerticesPerSize * numVerticesPerSize) - (numVerticesPerSizeMinusOne * numVerticesPerSizeMinusOne);
+			//	memcpy(_float16HeightsBuffer, _float16HeightsBufferBegin, remaining * sizeof(uint16_t));
+			//	_float16HeightsBuffer += remaining;
+			//	memcpy(_float32HeightsBuffer, _float32HeightsBufferBegin, remaining * sizeof(float));
+			//	_float32HeightsBuffer += remaining;
+			//}
 			assert((BYTE*)_float16HeightsBuffer - flatFloat16HeightsBuffer.ptr() == float16HeightsBufferSize);
 			flatFloat16HeightsBuffer.adjustSize(float16HeightsBufferSize);
 			assert((BYTE*)_float32HeightsBuffer - flatFloat32HeightsBuffer.ptr() == float32HeightsBufferSize);
@@ -909,6 +1008,29 @@ namespace TheWorld_Utils
 
 		assert(_streamBuffer - buffer.ptr() == streamBufferSize);
 		buffer.adjustSize(streamBufferSize);
+	}
+
+	void MeshCacheBuffer::setEmptyBuffer(size_t numVerticesPerSize, float gridStepInWU, std::string& meshId, TheWorld_Utils::MemoryBuffer& buffer)
+	{
+		meshId = generateNewMeshId();
+		
+		TheWorld_Utils::MeshCacheBuffer::CacheData cacheData;
+		cacheData.meshId = meshId;
+		//BYTE shortBuffer[256 + 1];	size_t size = 0;
+		//TheWorld_Utils::serializeToByteStream<size_t>(sizeof(size_t), shortBuffer, size);
+		TheWorld_Utils::TerrainEdit terrainEdit;
+		TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*) & terrainEdit, sizeof(TheWorld_Utils::TerrainEdit));
+		cacheData.minHeight = 0.0f;
+		cacheData.maxHeight = 0.0f;
+		cacheData.terrainEditValues = &terrainEditValuesBuffer;
+		TheWorld_Utils::MemoryBuffer emptyFloat16HeightsBuffer;
+		TheWorld_Utils::MemoryBuffer emptyFloat32HeightsBuffer;
+		TheWorld_Utils::MemoryBuffer emptyNormalBuffer;
+		cacheData.heights16Buffer = &emptyFloat16HeightsBuffer;
+		cacheData.heights32Buffer = &emptyFloat32HeightsBuffer;
+		cacheData.normalsBuffer = &emptyNormalBuffer;
+
+		setBufferFromCacheData(numVerticesPerSize, gridStepInWU, cacheData, buffer);
 	}
 
 	void MeshCacheBuffer::setBufferFromHeights(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude, bool generateNormals)

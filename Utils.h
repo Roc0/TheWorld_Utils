@@ -91,6 +91,46 @@ namespace TheWorld_Utils
 		size_t m_bufferSize;
 	};
 
+	class TerrainEdit
+	{
+	public:
+		size_t size;
+		bool needUploadToServer;
+
+		int noiseType;
+		int rotationType3D;
+		int noiseSeed;
+		float frequency;
+		int fractalType;
+		int fractalOctaves;
+		float fractalLacunarity;
+		float fractalGain;
+		float fractalWeightedStrength;
+		float fractalPingPongStrength;
+
+		int cellularDistanceFunction;
+		int cellularReturnType;
+		float cellularJitter;
+
+		int warpNoiseDomainWarpType;
+		int warpNoiseRotationType3D;
+		int warpNoiseSeed;
+		float warpNoiseDomainWarpAmp;
+		float warpNoiseFrequency;
+		int warpNoieseFractalType;
+		int warpNoiseFractalOctaves;
+		float warpNoiseFractalLacunarity;
+		float warpNoiseFractalGain;
+
+		unsigned int amplitude;		// range of heigths in WU (noise is from -1 to 1)
+		float minHeight;
+		float maxHeight;
+
+		__declspec(dllexport) TerrainEdit(void);
+		__declspec(dllexport) void serialize(TheWorld_Utils::MemoryBuffer& buffer);
+		__declspec(dllexport) void deserialize(TheWorld_Utils::MemoryBuffer& buffer);
+	};
+
 	template<> MYAPI void MemoryBuffer::populateVector<float>(std::vector<float>& v);
 
 	template <class TimeT = std::chrono::milliseconds, class ClockT = std::chrono::steady_clock> class Timer
@@ -230,7 +270,7 @@ namespace TheWorld_Utils
 		__declspec(dllexport) static std::string generateNewMeshId(void);
 		__declspec(dllexport) static bool firstMeshIdMoreRecent(std::string firstMeshId, std::string secondMeshId);
 		__declspec(dllexport) std::string getMeshIdFromCache(void);
-		__declspec(dllexport) void refreshMapsFromCache(std::string meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer);
+		__declspec(dllexport) bool refreshMapsFromCache(std::string meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer);
 		__declspec(dllexport) void refreshMapsFromBuffer(const BYTE* buffer, const size_t bufferSize, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache);
 		__declspec(dllexport) void refreshMapsFromBuffer(TheWorld_Utils::MemoryBuffer& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache);
 		__declspec(dllexport) void refreshMapsFromBuffer(std::string& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache);
@@ -241,6 +281,8 @@ namespace TheWorld_Utils
 		__declspec(dllexport) void writeBufferToCache(const BYTE* buffer, const size_t bufferSize);
 		__declspec(dllexport) void setBufferFromHeights(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude, bool generateNormals);
 		__declspec(dllexport) void setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, TheWorld_Utils::MemoryBuffer& buffer);
+		__declspec(dllexport) void setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, std::string& buffer);
+		__declspec(dllexport) void setEmptyBuffer(size_t numVerticesPerSize, float gridStepInWU, std::string& meshId, TheWorld_Utils::MemoryBuffer& buffer);
 		__declspec(dllexport) void generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, TheWorld_Utils::MemoryBuffer& normalsBuffer);
 		__declspec(dllexport) void generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, BYTE* normalsBuffer, const size_t normalsBufferSize, size_t& usedBufferSize);
 		//__declspec(dllexport) std::string getCacheDir()
@@ -328,6 +370,14 @@ namespace TheWorld_Utils
 		static float square(float f) 
 		{
 			return f * f;
+		}
+
+		static bool isPowerOfTwo(int n)
+		{
+			if (n == 0)
+				return false;
+
+			return (ceil(log2(n)) == floor(log2(n)));
 		}
 
 		/** Return the next power of two.
