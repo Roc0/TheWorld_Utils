@@ -94,6 +94,11 @@ namespace TheWorld_Utils
 	class TerrainEdit
 	{
 	public:
+		enum class TerrainType
+		{
+			noise1 = 1
+		};
+
 		size_t size;
 		bool needUploadToServer;
 
@@ -126,7 +131,8 @@ namespace TheWorld_Utils
 		float minHeight;
 		float maxHeight;
 
-		__declspec(dllexport) TerrainEdit(void);
+		__declspec(dllexport) TerrainEdit(enum class TerrainEdit::TerrainType terrainType = TerrainEdit::TerrainType::noise1);
+		__declspec(dllexport) void init(enum class TerrainEdit::TerrainType terrainType);
 		__declspec(dllexport) void serialize(TheWorld_Utils::MemoryBuffer& buffer);
 		__declspec(dllexport) void deserialize(TheWorld_Utils::MemoryBuffer& buffer);
 	};

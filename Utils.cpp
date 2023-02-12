@@ -28,39 +28,53 @@ namespace fs = std::filesystem;
 
 namespace TheWorld_Utils
 {
-	TerrainEdit::TerrainEdit(void)
+	TerrainEdit::TerrainEdit(enum class TerrainEdit::TerrainType terrainType)
 	{
 		size = sizeof(TerrainEdit);
 		needUploadToServer = false;
 
-		noiseType = FastNoiseLite::NoiseType::NoiseType_Perlin;
-		rotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
-		noiseSeed = 1337;
-		frequency = 0.0005f;
-		fractalType = FastNoiseLite::FractalType::FractalType_FBm;
-		fractalOctaves = 5;
-		fractalLacunarity = 2.0f;
-		fractalGain = 0.5f;
-		fractalWeightedStrength = 0.0f;
-		fractalPingPongStrength = 2.0f;
+		init(terrainType);
 
-		cellularDistanceFunction = FastNoiseLite::CellularDistanceFunction::CellularDistanceFunction_EuclideanSq;
-		cellularReturnType = FastNoiseLite::CellularReturnType::CellularReturnType_Distance;
-		cellularJitter = 1.0f;
-
-		warpNoiseDomainWarpType = -1;
-		warpNoiseRotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
-		warpNoiseSeed = 1337;
-		warpNoiseDomainWarpAmp = 30.0f;
-		warpNoiseFrequency = 0.005f;
-		warpNoieseFractalType = FastNoiseLite::FractalType::FractalType_None;
-		warpNoiseFractalOctaves = 5;
-		warpNoiseFractalLacunarity = 2.0f;
-		warpNoiseFractalGain = 0.5f;
-
-		amplitude = 1000;
 		minHeight = 0;
 		maxHeight = 0;
+	}
+
+	void TerrainEdit::init(enum class TerrainEdit::TerrainType terrainType)
+	{
+		switch (terrainType)
+		{
+		case TerrainEdit::TerrainType::noise1:
+		default:
+		{
+			noiseType = FastNoiseLite::NoiseType::NoiseType_Perlin;
+			rotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+			noiseSeed = 1337;
+			frequency = 0.0005f;
+			fractalType = FastNoiseLite::FractalType::FractalType_FBm;
+			fractalOctaves = 5;
+			fractalLacunarity = 2.0f;
+			fractalGain = 0.5f;
+			fractalWeightedStrength = 0.0f;
+			fractalPingPongStrength = 2.0f;
+
+			cellularDistanceFunction = FastNoiseLite::CellularDistanceFunction::CellularDistanceFunction_EuclideanSq;
+			cellularReturnType = FastNoiseLite::CellularReturnType::CellularReturnType_Distance;
+			cellularJitter = 1.0f;
+
+			warpNoiseDomainWarpType = -1;
+			warpNoiseRotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+			warpNoiseSeed = 1337;
+			warpNoiseDomainWarpAmp = 30.0f;
+			warpNoiseFrequency = 0.005f;
+			warpNoieseFractalType = FastNoiseLite::FractalType::FractalType_None;
+			warpNoiseFractalOctaves = 5;
+			warpNoiseFractalLacunarity = 2.0f;
+			warpNoiseFractalGain = 0.5f;
+
+			amplitude = 1000;
+		}
+		break;
+		}
 	}
 
 	void TerrainEdit::serialize(TheWorld_Utils::MemoryBuffer& buffer)
@@ -369,7 +383,7 @@ namespace TheWorld_Utils
 
 	std::string MeshCacheBuffer::getMeshIdFromCache(void)
 	{
-		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer getMeshIdFromCache 1") + __FUNCTION__, "ALL");
 
 		if (!fs::exists(m_meshFilePath))
 			return "";
@@ -424,12 +438,12 @@ namespace TheWorld_Utils
 
 	bool MeshCacheBuffer::refreshMapsFromCache(std::string _meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer)
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("refreshMapsFromCache 1 ") + __FUNCTION__, "ALL");
+		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer refreshMapsFromCache 1 ") + __FUNCTION__, "ALL");
 
 		TheWorld_Utils::MemoryBuffer buffer;
 
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("refreshMapsFromCache 1.1  ") + __FUNCTION__, "readBufferFromCache");
+			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer refreshMapsFromCache 1.1  ") + __FUNCTION__, "readBufferFromCache");
 			readBufferFromCache(_meshId, buffer);
 		}
 
@@ -437,7 +451,7 @@ namespace TheWorld_Utils
 			return false;
 
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("refreshMapsFromCache 1.2  ") + __FUNCTION__, "refreshMapsFromBuffer");
+			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer refreshMapsFromCache 1.2  ") + __FUNCTION__, "refreshMapsFromBuffer");
 			std::string meshIdFromBuffer;
 			refreshMapsFromBuffer(buffer, meshIdFromBuffer, terrainEditValues, minAltitude, maxAltitude, float16HeigthsBuffer, float32HeigthsBuffer, normalsBuffer, false);
 			assert(meshIdFromBuffer == _meshId);
@@ -452,7 +466,7 @@ namespace TheWorld_Utils
 
 	void MeshCacheBuffer::refreshMapsFromBuffer(const BYTE* buffer, const size_t bufferSize, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache)
 	{
-		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer refreshMapsFromBuffer 1 ") + __FUNCTION__, "ALL");
 
 		if (bufferSize == 0)
 		{
@@ -545,7 +559,7 @@ namespace TheWorld_Utils
 
 	void MeshCacheBuffer::readBufferFromCache(std::string _meshId, TheWorld_Utils::MemoryBuffer& buffer)
 	{
-		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer readBufferFromCache 1 ") + __FUNCTION__, "ALL");
 
 		BYTE shortBuffer[256 + 1];
 		size_t size;
@@ -654,7 +668,7 @@ namespace TheWorld_Utils
 
 	void MeshCacheBuffer::writeBufferToCache(const BYTE* buffer, const size_t bufferSize)
 	{
-		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer writeBufferToCache 1 ") + __FUNCTION__, "ALL");
 
 		std::string tempPath = m_meshFilePath + ".tmp";
 		
@@ -825,7 +839,7 @@ namespace TheWorld_Utils
 
 	void MeshCacheBuffer::generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, TheWorld_Utils::MemoryBuffer& normalsBuffer)
 	{
-		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals2 1 ") + __FUNCTION__, "serialize normals");
+		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals2 1 ") + __FUNCTION__, "serialize normals");
 
 		my_assert(vectGridHeights.size() == 0 || vectGridHeights.size() == numVerticesPerSize * numVerticesPerSize);
 
@@ -1035,7 +1049,7 @@ namespace TheWorld_Utils
 
 	void MeshCacheBuffer::setBufferFromHeights(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude, bool generateNormals)
 	{
-		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer SetBuffer 1 ") + __FUNCTION__, "ALL");
+		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromHeights 1 ") + __FUNCTION__, "ALL");
 
 		// get size of a size_t
 		size_t size_t_size = sizeof(size_t);
@@ -1061,7 +1075,7 @@ namespace TheWorld_Utils
 		struct _RGB* _tempNormalmapBuffer = nullptr;
 
 		{
-			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer SetBuffer 1.1 ") + __FUNCTION__, "calloc");
+			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromHeights 1.1 ") + __FUNCTION__, "calloc");
 
 			_streamBuffer = streamBuffer = (BYTE*)calloc(1, streamBufferSize);
 			if (streamBuffer == nullptr)
@@ -1090,7 +1104,7 @@ namespace TheWorld_Utils
 		}
 
 		{
-			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer SetBuffer 1.2 ") + __FUNCTION__, "meshId/edit values");
+			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromHeights 1.2 ") + __FUNCTION__, "meshId/edit values");
 
 			memcpy(_streamBuffer, "0", 1);
 			_streamBuffer++;
@@ -1116,7 +1130,7 @@ namespace TheWorld_Utils
 		_streamBuffer += size;
 
 		{
-			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer SetBuffer 1.3 ") + __FUNCTION__, "loop heigths");
+			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromHeights 1.3 ") + __FUNCTION__, "loop heigths");
 		
 			minAltitude = 0, maxAltitude = 0;
 			bool first = true;
@@ -1124,7 +1138,7 @@ namespace TheWorld_Utils
 			if (vectSize > 0)
 			{
 				{
-					//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer SetBuffer 1.3.1 ") + __FUNCTION__, "serialize heigths");
+					//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromHeights 1.3.1 ") + __FUNCTION__, "serialize heigths");
 
 					for (int z = 0; z < numVerticesPerSize; z++)			// m_heightMapImage->get_height()
 					{
@@ -1169,7 +1183,7 @@ namespace TheWorld_Utils
 				my_assert(normalmapSize == usedBufferSize);
 
 				{
-					//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer SetBuffer 1.3.3 ") + __FUNCTION__, "memcpy");
+					//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromHeights 1.3.3 ") + __FUNCTION__, "memcpy");
 
 					TheWorld_Utils::serializeToByteStream<float>(minAltitude, _streamBuffer, size);
 					_streamBuffer += size;
@@ -1205,12 +1219,12 @@ namespace TheWorld_Utils
 		}
 
 		{
-			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer SetBuffer 1.4 ") + __FUNCTION__, "copy out buffer");
+			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromHeights 1.4 ") + __FUNCTION__, "copy out buffer");
 			buffer = std::string((char*)streamBuffer, streamBufferSize);
 		}
 		
 		{
-			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer SetBuffer 1.5 ") + __FUNCTION__, "free");
+			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromHeights 1.5 ") + __FUNCTION__, "free");
 			if (float16HeightmapSize > 0)
 				free(tempFloat16HeithmapBuffer);
 			if (normalmapSize > 0)
