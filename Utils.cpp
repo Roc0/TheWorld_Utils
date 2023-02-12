@@ -33,6 +33,7 @@ namespace TheWorld_Utils
 		size = sizeof(TerrainEdit);
 		needUploadToServer = false;
 
+		TerrainEdit::terrainType = terrainType;
 		init(terrainType);
 
 		minHeight = 0;

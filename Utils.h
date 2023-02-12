@@ -101,6 +101,7 @@ namespace TheWorld_Utils
 
 		size_t size;
 		bool needUploadToServer;
+		enum class TerrainType terrainType;
 
 		int noiseType;
 		int rotationType3D;
