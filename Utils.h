@@ -96,7 +96,10 @@ namespace TheWorld_Utils
 	public:
 		enum class TerrainType
 		{
-			noise1 = 1
+			unknown = 0,
+			noise_1 = 1,
+			campaign_1 = 2,
+			campaign_2 = 3
 		};
 
 		size_t size;
@@ -132,10 +135,12 @@ namespace TheWorld_Utils
 		float minHeight;
 		float maxHeight;
 
-		__declspec(dllexport) TerrainEdit(enum class TerrainEdit::TerrainType terrainType = TerrainEdit::TerrainType::noise1);
+		__declspec(dllexport) TerrainEdit(enum class TerrainEdit::TerrainType terrainType = TerrainEdit::TerrainType::noise_1);
 		__declspec(dllexport) void init(enum class TerrainEdit::TerrainType terrainType);
 		__declspec(dllexport) void serialize(TheWorld_Utils::MemoryBuffer& buffer);
 		__declspec(dllexport) void deserialize(TheWorld_Utils::MemoryBuffer& buffer);
+		__declspec(dllexport) static std::string terrainTypeString(enum class TerrainEdit::TerrainType terrainType);
+		__declspec(dllexport) static enum class TerrainEdit::TerrainType terrainTypeEnum(std::string& terrainType);
 	};
 
 	template<> MYAPI void MemoryBuffer::populateVector<float>(std::vector<float>& v);
