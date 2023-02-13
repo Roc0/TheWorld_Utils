@@ -96,10 +96,10 @@ namespace TheWorld_Utils
 	public:
 		enum class TerrainType
 		{
-			unknown = 0,
-			noise_1 = 1,
-			campaign_1 = 2,
-			campaign_2 = 3
+			unknown = 0
+			,noise_1 = 1
+			,campaign_1 = 2
+			,campaign_2 = 3
 		};
 
 		size_t size;
