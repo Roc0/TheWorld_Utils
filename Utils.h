@@ -6,6 +6,8 @@
 //	#include <PoolArrays.hpp>
 //#endif
 
+#include "WorldModifier.h"
+
 #ifndef MYAPI 
 #define MYAPI   __declspec( dllimport )
 #endif 
@@ -91,21 +93,9 @@ namespace TheWorld_Utils
 		size_t m_bufferSize;
 	};
 
-	class TerrainEdit
+	class NoiseValues
 	{
 	public:
-		enum class TerrainType
-		{
-			unknown = 0
-			,noise_1 = 1
-			,campaign_1 = 2
-			,campaign_2 = 3
-		};
-
-		size_t size;
-		bool needUploadToServer;
-		enum class TerrainType terrainType;
-
 		int noiseType;
 		int rotationType3D;
 		int noiseSeed;
@@ -130,8 +120,26 @@ namespace TheWorld_Utils
 		int warpNoiseFractalOctaves;
 		float warpNoiseFractalLacunarity;
 		float warpNoiseFractalGain;
+	};
+	
+	class TerrainEdit
+	{
+	public:
+		enum class TerrainType
+		{
+			unknown = 0
+			,noise_1 = 1
+			,campaign_1 = 2
+			,campaign_2 = 3
+		};
 
-		unsigned int amplitude;		// range of heigths in WU (noise is from -1 to 1)
+		size_t size;
+		bool needUploadToServer;
+		enum class TerrainType terrainType;
+
+		NoiseValues noise;
+
+		unsigned int amplitude;		// range of heights in WU (noise is from -1 to 1)
 		float minHeight;
 		float maxHeight;
 
@@ -295,6 +303,8 @@ namespace TheWorld_Utils
 		__declspec(dllexport) void setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, TheWorld_Utils::MemoryBuffer& buffer);
 		__declspec(dllexport) void setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, std::string& buffer);
 		__declspec(dllexport) void setEmptyBuffer(size_t numVerticesPerSize, float gridStepInWU, std::string& meshId, TheWorld_Utils::MemoryBuffer& buffer);
+		__declspec(dllexport) void generateHeights(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, NoiseValues& noise, unsigned int amplitude, std::vector<float>& vectGridHeights, float& minHeight, float& maxHeight);
+		__declspec(dllexport) void applyWorldModifier(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, std::vector<float>& vectGridHeights, WorldModifier& wm);
 		__declspec(dllexport) void generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, TheWorld_Utils::MemoryBuffer& normalsBuffer);
 		__declspec(dllexport) void generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, BYTE* normalsBuffer, const size_t normalsBufferSize, size_t& usedBufferSize);
 		//__declspec(dllexport) std::string getCacheDir()

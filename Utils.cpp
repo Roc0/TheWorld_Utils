@@ -707,6 +707,65 @@ namespace TheWorld_Utils
 		if (rename(tempPath.c_str(), m_meshFilePath.c_str()) != 0)
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Rename error!").c_str()));
 	}
+
+	void MeshCacheBuffer::generateHeights(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, NoiseValues& noise, unsigned int amplitude, std::vector<float>& vectGridHeights, float& minHeight, float& maxHeight)
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateHeights 1 ") + __FUNCTION__, "ALL");
+
+		FastNoiseLite noiseLite(noise.noiseSeed);
+		noiseLite.SetNoiseType(FastNoiseLite::NoiseType::NoiseType_Perlin);
+		//noiseLite.SetRotationType3D();
+		noiseLite.SetFrequency(noise.frequency);
+		noiseLite.SetFractalType(FastNoiseLite::FractalType::FractalType_FBm);
+		noiseLite.SetFractalOctaves(noise.fractalOctaves);
+		noiseLite.SetFractalLacunarity(noise.fractalLacunarity);
+		noiseLite.SetFractalGain(noise.fractalGain);
+		noiseLite.SetFractalWeightedStrength(noise.fractalWeightedStrength);
+		noiseLite.SetFractalPingPongStrength(noise.fractalPingPongStrength);
+		//noiseLite.SetCellularDistanceFunction();
+		//noiseLite.SetCellularReturnType();
+		//noiseLite.SetCellularJitter()
+
+		minHeight = FLT_MAX;
+		maxHeight = FLT_MIN;
+
+		vectGridHeights.clear();
+		vectGridHeights.resize(numVerticesPerSize * numVerticesPerSize);
+
+		{
+			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateHeights 1.1 ") + __FUNCTION__, "Generate Heights");
+
+			size_t idx = 0;
+			for (int z = 0; z < numVerticesPerSize; z++)
+				for (int x = 0; x < numVerticesPerSize; x++)
+				{
+					float altitude = 0.0f;
+
+					{
+						//TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.1.1 ") + __FUNCTION__, "GetNoise");
+
+						float xf = lowerXGridVertex + (x * gridStepInWU);
+						float zf = lowerZGridVertex + (z * gridStepInWU);
+						altitude = noiseLite.GetNoise(xf, zf);
+						// noises are value in range -1 to 1 we need to interpolate with amplitude
+						altitude *= (amplitude / 2);
+
+						if (altitude < minHeight)
+							minHeight = altitude;
+						if (altitude > maxHeight)
+							maxHeight = altitude;
+					}
+
+					vectGridHeights[idx] = altitude;
+
+					idx++;
+				}
+		}
+	}
+		
+	void MeshCacheBuffer::applyWorldModifier(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, std::vector<float>& vectGridHeights, WorldModifier& wm)
+	{
+	}
 		
 	void MeshCacheBuffer::generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, BYTE* normalsBuffer, const size_t normalsBufferSize, size_t& usedBufferSize)
 	{
@@ -888,7 +947,7 @@ namespace TheWorld_Utils
 		TheWorld_Utils::MemoryBuffer* _flatFloat32HeightsBuffer = cacheData.heights32Buffer;
 		if (numHeights16 == 0)
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1.1 ") + __FUNCTION__, "gen flat heigths");
+			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1.1 ") + __FUNCTION__, "gen flat heights");
 
 			_flatFloat16HeightsBuffer = &flatFloat16HeightsBuffer;
 			_flatFloat32HeightsBuffer = &flatFloat32HeightsBuffer;
@@ -950,7 +1009,7 @@ namespace TheWorld_Utils
 		size_t streamBufferSize = 1 /* "0" */
 			+ sizeof(size_t) + cacheData.meshId.length()
 			+ sizeof(size_t) + cacheData.terrainEditValues->size()
-			+ sizeof(size_t); /* numheigths */
+			+ sizeof(size_t); /* numheights */
 		if (numHeights16 > 0)
 		{
 			streamBufferSize = streamBufferSize
@@ -992,7 +1051,7 @@ namespace TheWorld_Utils
 
 		if (numHeights16 > 0)
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1.3 ") + __FUNCTION__, "copy heigths");
+			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1.3 ") + __FUNCTION__, "copy heights");
 
 			TheWorld_Utils::serializeToByteStream<float>(cacheData.minHeight, _streamBuffer, size);
 			_streamBuffer += size;
@@ -1067,7 +1126,7 @@ namespace TheWorld_Utils
 		size_t streamBufferSize = 1 /* "0" */ 
 			+ size_t_size + meshId.length()
 			+ size_t_size + terrainEditValuesBuffer.size()
-			+ size_t_size /* numheigths */ + float_size /*min_altitude*/ + float_size /*max_altitude*/ + float16HeightmapSize + float32HeightmapSize + normalmapSize;
+			+ size_t_size /* numheights */ + float_size /*min_altitude*/ + float_size /*max_altitude*/ + float16HeightmapSize + float32HeightmapSize + normalmapSize;
 
 		BYTE* streamBuffer = nullptr;
 		BYTE* _streamBuffer = nullptr;
@@ -1132,7 +1191,7 @@ namespace TheWorld_Utils
 		_streamBuffer += size;
 
 		{
-			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromHeights 1.3 ") + __FUNCTION__, "loop heigths");
+			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromHeights 1.3 ") + __FUNCTION__, "loop heights");
 		
 			minAltitude = 0, maxAltitude = 0;
 			bool first = true;
@@ -1140,7 +1199,7 @@ namespace TheWorld_Utils
 			if (vectSize > 0)
 			{
 				{
-					//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromHeights 1.3.1 ") + __FUNCTION__, "serialize heigths");
+					//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromHeights 1.3.1 ") + __FUNCTION__, "serialize heights");
 
 					for (int z = 0; z < numVerticesPerSize; z++)			// m_heightMapImage->get_height()
 					{
@@ -1149,7 +1208,7 @@ namespace TheWorld_Utils
 							TheWorld_Utils::FLOAT_32 f;
 							{
 
-								// supposing heigths are ordered line by line
+								// supposing heights are ordered line by line
 								f.f32 = vectGridHeights[idx];
 
 								*_tempFloat16HeithmapBuffer = half_from_float(f.u32);
@@ -1174,13 +1233,13 @@ namespace TheWorld_Utils
 					}
 				}
 
-				std::vector<float> heigthsEmptyVector;
-				std::vector<float>* heigthsVectorPointer = &heigthsEmptyVector;
+				std::vector<float> heightsEmptyVector;
+				std::vector<float>* heightsVectorPointer = &heightsEmptyVector;
 				if (generateNormals)
-					heigthsVectorPointer = &vectGridHeights;
+					heightsVectorPointer = &vectGridHeights;
 
 				size_t usedBufferSize = 0;
-				this->generateNormals(numVerticesPerSize, gridStepInWU, *heigthsVectorPointer, (BYTE*)_tempNormalmapBuffer, normalmapSize, usedBufferSize);
+				this->generateNormals(numVerticesPerSize, gridStepInWU, *heightsVectorPointer, (BYTE*)_tempNormalmapBuffer, normalmapSize, usedBufferSize);
 				_tempNormalmapBuffer = (struct TheWorld_Utils::_RGB*)((BYTE*)_tempNormalmapBuffer + usedBufferSize);
 				my_assert(normalmapSize == usedBufferSize);
 
