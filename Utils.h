@@ -37,7 +37,49 @@ namespace TheWorld_Utils
 {
 	// https://cellperformance.beyond3d.com/articles/2006/07/branchfree_implementation_of_h_1.html
 
-#define my_assert(cond) {if (!(cond)) {PLOG_DEBUG << "assert failed!";};	assert(cond);}
+	class Exception : public std::exception
+	{
+	public:
+		_declspec(dllexport) Exception(const char* function, const char* message = NULL, const char* message2 = NULL, int rc = 0)
+		{
+			m_exceptionName = "MapManagerException";
+			if (message == NULL || strlen(message) == 0)
+				m_message = "MapManager Generic Exception - C++ Exception";
+			else
+			{
+				if (message2 == NULL || strlen(message2) == 0)
+				{
+					m_message = message;
+				}
+				else
+				{
+					m_message = message;
+					m_message += " - ";
+					m_message += message2;
+					m_message += " - rc=";
+					m_message += std::to_string(rc);
+				}
+			}
+		};
+		_declspec(dllexport) ~Exception() {};
+
+		const char* what() const throw ()
+		{
+			return m_message.c_str();
+		}
+
+		const char* exceptionName()
+		{
+			return m_exceptionName.c_str();
+		}
+	private:
+		std::string m_message;
+
+	protected:
+		std::string m_exceptionName;
+	};
+
+#define my_assert(cond) {if (!(cond)) {PLOG_DEBUG << "assert failed!";};	assert(cond);	if (!(cond)) {throw new TheWorld_Utils::Exception(__FUNCTION__, std::string(std::string("assert failed! Line number: ") + std::to_string(__LINE__)).c_str());};}
 
 	typedef union FLOAT_32 FLOAT_32;
 	union FLOAT_32
@@ -135,6 +177,7 @@ namespace TheWorld_Utils
 
 		size_t size;
 		bool needUploadToServer;
+		bool emptyNormals;
 		enum class TerrainType terrainType;
 
 		NoiseValues noise;
@@ -290,15 +333,15 @@ namespace TheWorld_Utils
 		__declspec(dllexport) static std::string generateNewMeshId(void);
 		__declspec(dllexport) static bool firstMeshIdMoreRecent(std::string firstMeshId, std::string secondMeshId);
 		__declspec(dllexport) std::string getMeshIdFromCache(void);
-		__declspec(dllexport) bool refreshMapsFromCache(std::string meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer);
+		__declspec(dllexport) bool refreshMapsFromCache(size_t numVerticesPerSize, float gridStepInWU, std::string meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer);
 		__declspec(dllexport) void refreshMapsFromBuffer(const BYTE* buffer, const size_t bufferSize, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache);
 		__declspec(dllexport) void refreshMapsFromBuffer(TheWorld_Utils::MemoryBuffer& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache);
 		__declspec(dllexport) void refreshMapsFromBuffer(std::string& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache);
 		__declspec(dllexport) void readBufferFromCache(std::string meshId, TheWorld_Utils::MemoryBuffer& buffer);
 		__declspec(dllexport) void readBufferFromCache(std::string meshId, std::string& buffer);
-		__declspec(dllexport) void writeBufferToCache(std::string& buffer);
-		__declspec(dllexport) void writeBufferToCache(TheWorld_Utils::MemoryBuffer& buffer);
-		__declspec(dllexport) void writeBufferToCache(const BYTE* buffer, const size_t bufferSize);
+		__declspec(dllexport) void writeBufferToCache(std::string& buffer, bool renewMeshId = false);
+		__declspec(dllexport) void writeBufferToCache(TheWorld_Utils::MemoryBuffer& buffer, bool renewMeshId = false);
+		__declspec(dllexport) void writeBufferToCache(const BYTE* buffer, const size_t bufferSize, bool renewMeshId = false);
 		__declspec(dllexport) void setBufferFromHeights(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude, bool generateNormals);
 		__declspec(dllexport) void setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, TheWorld_Utils::MemoryBuffer& buffer);
 		__declspec(dllexport) void setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, std::string& buffer);

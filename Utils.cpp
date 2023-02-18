@@ -32,6 +32,7 @@ namespace TheWorld_Utils
 	{
 		size = sizeof(TerrainEdit);
 		needUploadToServer = false;
+		emptyNormals = true;
 
 		TerrainEdit::terrainType = terrainType;
 		init(terrainType);
@@ -438,22 +439,39 @@ namespace TheWorld_Utils
 		return m_meshId;
 	}
 
-	bool MeshCacheBuffer::refreshMapsFromCache(std::string _meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer)
+	bool MeshCacheBuffer::refreshMapsFromCache(size_t numVerticesPerSize, float gridStepInWU, std::string _meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer refreshMapsFromCache 1 ") + __FUNCTION__, "ALL");
 
 		TheWorld_Utils::MemoryBuffer buffer;
 
+		bool empty = false;
+		
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer refreshMapsFromCache 1.1  ") + __FUNCTION__, "readBufferFromCache");
 			readBufferFromCache(_meshId, buffer);
 		}
 
 		if (buffer.size() == 0)
-			return false;
-
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer refreshMapsFromCache 1.2  ") + __FUNCTION__, "refreshMapsFromBuffer");
+			TheWorld_Utils::MemoryBuffer tempBuffer;
+
+			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer refreshMapsFromCache 1.2 ") + __FUNCTION__, "setEmptyBuffer");
+				setEmptyBuffer(numVerticesPerSize, gridStepInWU, _meshId, tempBuffer);
+			}
+
+			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer refreshMapsFromCache 1.3 ") + __FUNCTION__, "readMapsFromMeshCache");
+
+				refreshMapsFromBuffer(tempBuffer, _meshId, terrainEditValues, minAltitude, maxAltitude, float16HeigthsBuffer, float32HeigthsBuffer, normalsBuffer, false);
+			}
+
+			empty = true;
+		}
+		else
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer refreshMapsFromCache 1.4  ") + __FUNCTION__, "refreshMapsFromBuffer");
 			std::string meshIdFromBuffer;
 			refreshMapsFromBuffer(buffer, meshIdFromBuffer, terrainEditValues, minAltitude, maxAltitude, float16HeigthsBuffer, float32HeigthsBuffer, normalsBuffer, false);
 			assert(meshIdFromBuffer == _meshId);
@@ -463,7 +481,7 @@ namespace TheWorld_Utils
 			}
 		}
 
-		return true;
+		return empty;
 	}
 
 	void MeshCacheBuffer::refreshMapsFromBuffer(const BYTE* buffer, const size_t bufferSize, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache)
@@ -658,17 +676,17 @@ namespace TheWorld_Utils
 		_buffer.append((char*)buffer.ptr(), size);
 	}
 		
-	void MeshCacheBuffer::writeBufferToCache(std::string& buffer)
+	void MeshCacheBuffer::writeBufferToCache(std::string& buffer, bool renewMeshId)
 	{
-		writeBufferToCache((BYTE*)buffer.c_str(), buffer.size());
+		writeBufferToCache((BYTE*)buffer.c_str(), buffer.size(), renewMeshId);
 	}
 
-	void MeshCacheBuffer::writeBufferToCache(TheWorld_Utils::MemoryBuffer& buffer)
+	void MeshCacheBuffer::writeBufferToCache(TheWorld_Utils::MemoryBuffer& buffer, bool renewMeshId)
 	{
-		writeBufferToCache(buffer.ptr(), buffer.size());
+		writeBufferToCache(buffer.ptr(), buffer.size(), renewMeshId);
 	}
 
-	void MeshCacheBuffer::writeBufferToCache(const BYTE* buffer, const size_t bufferSize)
+	void MeshCacheBuffer::writeBufferToCache(const BYTE* buffer, const size_t bufferSize, bool renewMeshId)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer writeBufferToCache 1 ") + __FUNCTION__, "ALL");
 
@@ -677,6 +695,23 @@ namespace TheWorld_Utils
 		BYTE shortBuffer[256 + 1];
 		size_t bufferSize_size = 0;	// get size of a size_t
 
+		if (renewMeshId)
+		{
+			std::string newMeshId = generateNewMeshId();
+
+			char* movingStreamBuffer = (char*)buffer;
+			char* endOfBuffer = movingStreamBuffer + bufferSize;
+
+			movingStreamBuffer++;	// bypass "0"
+
+			size_t size = 0;
+			size_t meshIdSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
+			movingStreamBuffer += size;
+
+			my_assert(meshIdSize == newMeshId.size())
+			memcpy(movingStreamBuffer, newMeshId.c_str(), meshIdSize);
+		}
+				
 		TheWorld_Utils::serializeToByteStream<size_t>(bufferSize, shortBuffer, bufferSize_size);
 
 		FILE* outFile = nullptr;
