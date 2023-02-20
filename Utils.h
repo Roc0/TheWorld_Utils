@@ -186,7 +186,7 @@ namespace TheWorld_Utils
 		float minHeight;
 		float maxHeight;
 
-		__declspec(dllexport) TerrainEdit(enum class TerrainEdit::TerrainType terrainType = TerrainEdit::TerrainType::noise_1);
+		__declspec(dllexport) TerrainEdit(enum class TerrainEdit::TerrainType terrainType = TerrainEdit::TerrainType::campaign_1);
 		__declspec(dllexport) void init(enum class TerrainEdit::TerrainType terrainType);
 		__declspec(dllexport) void serialize(TheWorld_Utils::MemoryBuffer& buffer);
 		__declspec(dllexport) void deserialize(TheWorld_Utils::MemoryBuffer& buffer);
@@ -347,7 +347,7 @@ namespace TheWorld_Utils
 		__declspec(dllexport) void setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, std::string& buffer);
 		__declspec(dllexport) void setEmptyBuffer(size_t numVerticesPerSize, float gridStepInWU, std::string& meshId, TheWorld_Utils::MemoryBuffer& buffer);
 		__declspec(dllexport) void generateHeights(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, NoiseValues& noise, unsigned int amplitude, std::vector<float>& vectGridHeights, float& minHeight, float& maxHeight);
-		__declspec(dllexport) void applyWorldModifier(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, std::vector<float>& vectGridHeights, WorldModifier& wm);
+		__declspec(dllexport) void applyWorldModifier(int level, size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, std::vector<float>& vectGridHeights, float& minHeight, float& maxHeight, WorldModifier& wm);
 		__declspec(dllexport) void generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, TheWorld_Utils::MemoryBuffer& normalsBuffer);
 		__declspec(dllexport) void generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, BYTE* normalsBuffer, const size_t normalsBufferSize, size_t& usedBufferSize);
 		//__declspec(dllexport) std::string getCacheDir()
@@ -544,6 +544,11 @@ namespace TheWorld_Utils
 				vec.push_back(line);
 			}
 			return vec;
+		}
+	
+		static float getDistance(float x1, float y1, float x2, float y2)
+		{
+			return sqrtf((powf((x2 - x1), 2.0) + powf((y2 - y1), 2.0)));
 		}
 	};
 

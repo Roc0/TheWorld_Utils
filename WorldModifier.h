@@ -112,8 +112,8 @@ namespace TheWorld_Utils
 	enum class WMFunctionType
 	{
 		none = -1
-		,Add = 0
-		,Mulitply = 1
+		,ConsiderMinMax = 0
+		,ConsiderStrength = 1
 	};
 
 	enum class WMOrder

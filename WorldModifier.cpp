@@ -3,6 +3,7 @@
 #define _USE_MATH_DEFINES // for C++
 
 #include "math.h"
+#include "assert.h"
 #include "WorldModifier.h"
 
 namespace TheWorld_Utils
@@ -32,6 +33,7 @@ namespace TheWorld_Utils
 		m_order = order;
 		m_min = min;
 		m_max = max;
+		assert(m_min <= m_max);
 
 		m_rowid = -1;
 

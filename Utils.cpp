@@ -798,8 +798,151 @@ namespace TheWorld_Utils
 		}
 	}
 		
-	void MeshCacheBuffer::applyWorldModifier(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, std::vector<float>& vectGridHeights, WorldModifier& wm)
+	void MeshCacheBuffer::applyWorldModifier(int level, size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, std::vector<float>& vectGridHeights, float& minHeight, float& maxHeight, WorldModifier& wm)
 	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer applyWorldModifier 1 ") + __FUNCTION__, "ALL");
+
+		if (level != wm.getPos().getLevel())
+			return;
+
+		float sizeInWU = (numVerticesPerSize - 1) * gridStepInWU;
+
+		float AOE = wm.getAOE();
+		float wmX = wm.getPos().getPosX();
+		float wmZ = wm.getPos().getPosZ();
+		float wmMin = wm.getMin();
+		float wmMax = wm.getMax();
+		enum class TheWorld_Utils::WMType wmType = wm.getPos().getType();
+		enum class TheWorld_Utils::WMFunctionType wmFunctionType = wm.getFunctionType();
+		enum class TheWorld_Utils::WMOrder wmOrder = wm.getOrder();
+		float wmMaxExtension = wmMax - wmMin;
+		float wmStrength = wmMax - wmMin;
+
+		if (wmType == TheWorld_Utils::WMType::none)
+			return;
+
+		if (AOE > 0)
+		{
+			float d1 = TheWorld_Utils::Utils::getDistance(wmX, wmZ, lowerXGridVertex, lowerZGridVertex);
+			float d2 = TheWorld_Utils::Utils::getDistance(wmX, wmZ, lowerXGridVertex + sizeInWU, lowerZGridVertex);
+			float d3 = TheWorld_Utils::Utils::getDistance(wmX, wmZ, lowerXGridVertex, lowerZGridVertex + sizeInWU);
+			float d4 = TheWorld_Utils::Utils::getDistance(wmX, wmZ, lowerXGridVertex + sizeInWU, lowerZGridVertex + sizeInWU);
+
+			if (d1 > AOE && d2 > AOE && d3 > AOE && d4 > AOE)
+				return;
+		}
+
+		size_t idx = -1;
+		for (int z = 0; z < numVerticesPerSize; z++)
+			for (int x = 0; x < numVerticesPerSize; x++)
+			{
+				idx++;
+
+				if (x == numVerticesPerSize - 1 && z == 0)
+				{
+					assert(x == numVerticesPerSize - 1 && z == 0);
+				}
+				if (x == 0 && z == numVerticesPerSize - 1)
+				{
+					assert(x == 0 && z == numVerticesPerSize - 1);
+				}
+				if (x == numVerticesPerSize - 1 && z == numVerticesPerSize - 1)
+				{
+					assert(x == numVerticesPerSize - 1 && z == numVerticesPerSize - 1);
+				}
+
+				float dist = TheWorld_Utils::Utils::getDistance(wmX, wmZ, (float)x * gridStepInWU + lowerXGridVertex, (float)z * gridStepInWU + lowerZGridVertex);
+
+				if (dist > AOE)
+				{
+					if (idx == 0)
+					{
+						minHeight = maxHeight = vectGridHeights[idx];
+					}
+					else
+					{
+						if (vectGridHeights[idx] < minHeight)
+							minHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] > maxHeight)
+							maxHeight = vectGridHeights[idx];
+					}
+					continue;
+				}
+
+				switch (wmType)
+				{
+				case TheWorld_Utils::WMType::elevator:
+				{
+					// TheWorld_Utils::WMType::elevator
+					switch (wmFunctionType)
+					{
+						// TheWorld_Utils::WMType::elevator - TheWorld_Utils::WMFunctionType::ConsiderMinMax
+					case TheWorld_Utils::WMFunctionType::ConsiderMinMax:
+					{
+						switch (wmOrder)
+						{
+							// TheWorld_Utils::WMType::elevator - TheWorld_Utils::WMFunctionType::ConsiderMinMax - TheWorld_Utils::WMOrder::MaxEffectOnWM
+						case TheWorld_Utils::WMOrder::MaxEffectOnWM:
+						{
+							float coeff = (AOE - dist) / AOE;	// 0 on perimeter, 1 on WM
+							float addition = wmMaxExtension * coeff + wmMin;
+							vectGridHeights[idx] += addition;
+						}
+						break;
+						// TheWorld_Utils::WMType::elevator - TheWorld_Utils::WMFunctionType::ConsiderMinMax - TheWorld_Utils::WMOrder::MinEffectOnWM
+						case TheWorld_Utils::WMOrder::MinEffectOnWM:
+						{
+							float coeff = dist / AOE;			// 1 on perimeter, 0 on WM
+							float addition = wmMaxExtension * coeff + wmMin;
+							vectGridHeights[idx] += addition;
+						}
+						break;
+						}
+					}
+					break;
+
+					// TheWorld_Utils::WMType::elevator - TheWorld_Utils::WMFunctionType::ConsiderStrength
+					case TheWorld_Utils::WMFunctionType::ConsiderStrength:
+					{
+						switch (wmOrder)
+						{
+							// TheWorld_Utils::WMType::elevator - TheWorld_Utils::WMFunctionType::ConsiderStrength - TheWorld_Utils::WMOrder::MaxEffectOnWM
+						case TheWorld_Utils::WMOrder::MaxEffectOnWM:
+						{
+							float coeff = (AOE - dist) / AOE;	// 0 on perimeter, 1 on WM
+							float addition = wmStrength * coeff;
+							vectGridHeights[idx] += addition;
+						}
+						break;
+
+						// TheWorld_Utils::WMType::elevator - TheWorld_Utils::WMFunctionType::ConsiderStrength - TheWorld_Utils::WMOrder::MinEffectOnWM
+						case TheWorld_Utils::WMOrder::MinEffectOnWM:
+						{
+							float coeff = dist / AOE;			// 1 on perimeter, 0 on WM
+							float addition = wmMaxExtension * coeff;
+							vectGridHeights[idx] += addition;
+						}
+						break;
+						}
+					}
+					break;
+					}
+				}
+				break;
+				}
+
+				if (idx == 0)
+				{
+					minHeight = maxHeight = vectGridHeights[idx];
+				}
+				else
+				{
+					if (vectGridHeights[idx] < minHeight)
+						minHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] > maxHeight)
+						maxHeight = vectGridHeights[idx];
+				}
+			}
 	}
 		
 	void MeshCacheBuffer::generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, BYTE* normalsBuffer, const size_t normalsBufferSize, size_t& usedBufferSize)
