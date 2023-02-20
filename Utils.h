@@ -177,7 +177,7 @@ namespace TheWorld_Utils
 
 		size_t size;
 		bool needUploadToServer;
-		bool emptyNormals;
+		bool normalsNeedRegen;
 		enum class TerrainType terrainType;
 
 		NoiseValues noise;

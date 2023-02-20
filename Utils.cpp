@@ -32,7 +32,7 @@ namespace TheWorld_Utils
 	{
 		size = sizeof(TerrainEdit);
 		needUploadToServer = false;
-		emptyNormals = true;
+		normalsNeedRegen = true;
 
 		TerrainEdit::terrainType = terrainType;
 		init(terrainType);
