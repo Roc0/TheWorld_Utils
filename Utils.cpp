@@ -39,6 +39,22 @@ namespace TheWorld_Utils
 
 		minHeight = 0;
 		maxHeight = 0;
+
+		eastSideXPlus.needBlend = true;
+		eastSideXPlus.minHeight = 0.0f;
+		eastSideXPlus.maxHeight = 0.0f;
+		
+		westSideXMinus.needBlend = true;
+		westSideXMinus.minHeight = 0.0f;
+		westSideXMinus.maxHeight = 0.0f;
+		
+		southSideZPlus.needBlend = true;
+		southSideZPlus.minHeight = 0.0f;
+		southSideZPlus.maxHeight = 0.0f;
+		
+		northSideZMinus.needBlend = true;
+		northSideZMinus.minHeight = 0.0f;
+		northSideZMinus.maxHeight = 0.0f;
 	}
 
 	std::string TerrainEdit::terrainTypeString(enum class TerrainEdit::TerrainType terrainType)
@@ -55,9 +71,29 @@ namespace TheWorld_Utils
 			return "campaign_1";
 		}
 		break;
-		case TerrainEdit::TerrainType::campaign_2:
+		case TerrainEdit::TerrainType::low_hills:
 		{
-			return "campaign_2";
+			return "low_hills";
+		}
+		break;
+		case TerrainEdit::TerrainType::high_hills:
+		{
+			return "high_hills";
+		}
+		break;
+		case TerrainEdit::TerrainType::low_mountains:
+		{
+			return "low_mountains";
+		}
+		break;
+		case TerrainEdit::TerrainType::high_mountains_1:
+		{
+			return "high_mountains_1";
+		}
+		break;
+		case TerrainEdit::TerrainType::high_mountains_2:
+		{
+			return "high_mountains_2";
 		}
 		break;
 		default:
@@ -74,8 +110,16 @@ namespace TheWorld_Utils
 			return TerrainEdit::TerrainType::noise_1;
 		else if (terrainType == "campaign_1")
 			return TerrainEdit::TerrainType::campaign_1;
-		else if (terrainType == "campaign_2")
-			return TerrainEdit::TerrainType::campaign_2;
+		else if (terrainType == "low_hills")
+			return TerrainEdit::TerrainType::low_hills;
+		else if (terrainType == "high_hills")
+			return TerrainEdit::TerrainType::high_hills;
+		else if (terrainType == "low_mountains")
+			return TerrainEdit::TerrainType::low_mountains;
+		else if (terrainType == "high_mountains_1")
+			return TerrainEdit::TerrainType::high_mountains_1;
+		else if (terrainType == "high_mountains_2")
+			return TerrainEdit::TerrainType::high_mountains_2;
 		else
 			return TerrainEdit::TerrainType::unknown;
 	}
@@ -458,7 +502,7 @@ namespace TheWorld_Utils
 
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer refreshMapsFromCache 1.2 ") + __FUNCTION__, "setEmptyBuffer");
-				setEmptyBuffer(numVerticesPerSize, gridStepInWU, _meshId, tempBuffer);
+				setEmptyBuffer(numVerticesPerSize, _meshId, tempBuffer);
 			}
 
 			{
@@ -743,32 +787,27 @@ namespace TheWorld_Utils
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Rename error!").c_str()));
 	}
 
-	void MeshCacheBuffer::generateHeights(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, NoiseValues& noise, unsigned int amplitude, std::vector<float>& vectGridHeights, float& minHeight, float& maxHeight)
+	void MeshCacheBuffer::generateHeightsWithNoise(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, TerrainEdit* terraiEdit, std::vector<float>& vectGridHeights)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateHeights 1 ") + __FUNCTION__, "ALL");
-
-		FastNoiseLite noiseLite(noise.noiseSeed);
-		noiseLite.SetNoiseType(FastNoiseLite::NoiseType::NoiseType_Perlin);
-		//noiseLite.SetRotationType3D();
-		noiseLite.SetFrequency(noise.frequency);
-		noiseLite.SetFractalType(FastNoiseLite::FractalType::FractalType_FBm);
-		noiseLite.SetFractalOctaves(noise.fractalOctaves);
-		noiseLite.SetFractalLacunarity(noise.fractalLacunarity);
-		noiseLite.SetFractalGain(noise.fractalGain);
-		noiseLite.SetFractalWeightedStrength(noise.fractalWeightedStrength);
-		noiseLite.SetFractalPingPongStrength(noise.fractalPingPongStrength);
-		//noiseLite.SetCellularDistanceFunction();
-		//noiseLite.SetCellularReturnType();
-		//noiseLite.SetCellularJitter()
-
-		minHeight = FLT_MAX;
-		maxHeight = FLT_MIN;
 
 		vectGridHeights.clear();
 		vectGridHeights.resize(numVerticesPerSize * numVerticesPerSize);
 
 		{
-			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateHeights 1.1 ") + __FUNCTION__, "Generate Heights");
+			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateHeights 1.1 ") + __FUNCTION__, "Generate jag");
+
+			TheWorld_Utils::TerrainEdit terrainEdit(TheWorld_Utils::TerrainEdit::TerrainType::jagged_1);
+			
+			FastNoiseLite noiseLite(terrainEdit.noise.noiseSeed);
+			noiseLite.SetNoiseType((enum FastNoiseLite::NoiseType)terrainEdit.noise.noiseType);
+			noiseLite.SetFrequency(terrainEdit.noise.frequency);
+			noiseLite.SetFractalType((enum FastNoiseLite::FractalType)terrainEdit.noise.fractalType);
+			noiseLite.SetFractalOctaves(terrainEdit.noise.fractalOctaves);
+			noiseLite.SetFractalLacunarity(terrainEdit.noise.fractalLacunarity);
+			noiseLite.SetFractalGain(terrainEdit.noise.fractalGain);
+			noiseLite.SetFractalWeightedStrength(terrainEdit.noise.fractalWeightedStrength);
+			noiseLite.SetFractalPingPongStrength(terrainEdit.noise.fractalPingPongStrength);
 
 			size_t idx = 0;
 			for (int z = 0; z < numVerticesPerSize; z++)
@@ -777,28 +816,145 @@ namespace TheWorld_Utils
 					float altitude = 0.0f;
 
 					{
-						//TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.1.1 ") + __FUNCTION__, "GetNoise");
+						//TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.1.2 ") + __FUNCTION__, "GetNoise");
 
-						float xf = lowerXGridVertex + (x * gridStepInWU);
-						float zf = lowerZGridVertex + (z * gridStepInWU);
+						float xf = (lowerXGridVertex + (x * gridStepInWU));
+						float zf = (lowerZGridVertex + (z * gridStepInWU));
 						altitude = noiseLite.GetNoise(xf, zf);
 						// noises are value in range -1 to 1 we need to interpolate with amplitude
-						altitude *= (amplitude / 2);
-
-						if (altitude < minHeight)
-							minHeight = altitude;
-						if (altitude > maxHeight)
-							maxHeight = altitude;
+						altitude *= (terrainEdit.noise.amplitude / 2);
 					}
 
 					vectGridHeights[idx] = altitude;
 
 					idx++;
+				}		
+		}
+
+		{
+			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateHeights 1.2 ") + __FUNCTION__, "Generate Heights");
+
+			FastNoiseLite noiseLite(terraiEdit->noise.noiseSeed);
+			noiseLite.SetNoiseType((enum FastNoiseLite::NoiseType)terraiEdit->noise.noiseType);
+			//noiseLite.SetRotationType3D();
+			noiseLite.SetFrequency(terraiEdit->noise.frequency);
+			noiseLite.SetFractalType((enum FastNoiseLite::FractalType)terraiEdit->noise.fractalType);
+			noiseLite.SetFractalOctaves(terraiEdit->noise.fractalOctaves);
+			noiseLite.SetFractalLacunarity(terraiEdit->noise.fractalLacunarity);
+			noiseLite.SetFractalGain(terraiEdit->noise.fractalGain);
+			noiseLite.SetFractalWeightedStrength(terraiEdit->noise.fractalWeightedStrength);
+			noiseLite.SetFractalPingPongStrength(terraiEdit->noise.fractalPingPongStrength);
+			//noiseLite.SetCellularDistanceFunction();
+			//noiseLite.SetCellularReturnType();
+			//noiseLite.SetCellularJitter()
+
+			terraiEdit->minHeight = FLT_MAX;
+			terraiEdit->maxHeight = FLT_MIN;
+
+			terraiEdit->eastSideXPlus.minHeight = FLT_MAX;
+			terraiEdit->eastSideXPlus.maxHeight = FLT_MIN;
+
+			terraiEdit->westSideXMinus.minHeight = FLT_MAX;
+			terraiEdit->westSideXMinus.maxHeight = FLT_MIN;
+
+			terraiEdit->southSideZPlus.minHeight = FLT_MAX;
+			terraiEdit->southSideZPlus.maxHeight = FLT_MIN;
+
+			terraiEdit->northSideZMinus.minHeight = FLT_MAX;
+			terraiEdit->northSideZMinus.maxHeight = FLT_MIN;
+
+			size_t idx = 0;
+			for (int z = 0; z < numVerticesPerSize; z++)
+				for (int x = 0; x < numVerticesPerSize; x++)
+				{
+					float altitude = 0.0f;
+
+					{
+						//TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.2.2 ") + __FUNCTION__, "GetNoise main");
+
+						float xf = (lowerXGridVertex + (x * gridStepInWU)) * terraiEdit->noise.scaleFactor;
+						float zf = (lowerZGridVertex + (z * gridStepInWU)) * terraiEdit->noise.scaleFactor;
+						altitude = noiseLite.GetNoise(xf, zf);
+						// noises are value in range -1 to 1 we need to interpolate with amplitude
+						altitude *= (terraiEdit->noise.amplitude / 2);
+
+						if (altitude < terraiEdit->minHeight)
+							terraiEdit->minHeight = altitude;
+						if (altitude > terraiEdit->maxHeight)
+							terraiEdit->maxHeight = altitude;
+
+						if (x == 0)
+						{
+							if (altitude < terraiEdit->westSideXMinus.minHeight)
+								terraiEdit->westSideXMinus.minHeight = altitude;
+							if (altitude > terraiEdit->westSideXMinus.maxHeight)
+								terraiEdit->westSideXMinus.maxHeight = altitude;
+						}
+
+						if (z == 0)
+						{
+							if (altitude < terraiEdit->northSideZMinus.minHeight)
+								terraiEdit->northSideZMinus.minHeight = altitude;
+							if (altitude > terraiEdit->northSideZMinus.maxHeight)
+								terraiEdit->northSideZMinus.maxHeight = altitude;
+						}
+
+						if (x == numVerticesPerSize - 1)
+						{
+							if (altitude < terraiEdit->eastSideXPlus.minHeight)
+								terraiEdit->eastSideXPlus.minHeight = altitude;
+							if (altitude > terraiEdit->eastSideXPlus.maxHeight)
+								terraiEdit->eastSideXPlus.maxHeight = altitude;
+						}
+
+						if (z == numVerticesPerSize - 1)
+						{
+							if (altitude < terraiEdit->southSideZPlus.minHeight)
+								terraiEdit->southSideZPlus.minHeight = altitude;
+							if (altitude > terraiEdit->southSideZPlus.maxHeight)
+								terraiEdit->southSideZPlus.maxHeight = altitude;
+						}
+					}
+
+					vectGridHeights[idx] += altitude;
+
+					idx++;
 				}
+		}
+
+		{
+			//TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.3 ") + __FUNCTION__, "Adjust desidered min height");
+
+			if (terraiEdit->noise.desideredMinHeight != FLT_MIN)
+			{
+				float corrector = terraiEdit->noise.desideredMinHeight - terraiEdit->minHeight;
+				size_t idx = 0;
+				for (int z = 0; z < numVerticesPerSize; z++)
+					for (int x = 0; x < numVerticesPerSize; x++)
+					{
+						vectGridHeights[idx] += corrector;
+						idx++;
+					}
+
+				terraiEdit->minHeight += corrector;
+				terraiEdit->maxHeight += corrector;
+
+				terraiEdit->eastSideXPlus.minHeight += corrector;
+				terraiEdit->eastSideXPlus.maxHeight += corrector;
+
+				terraiEdit->westSideXMinus.minHeight += corrector;
+				terraiEdit->westSideXMinus.maxHeight += corrector;
+
+				terraiEdit->southSideZPlus.minHeight += corrector;
+				terraiEdit->southSideZPlus.maxHeight += corrector;
+
+				terraiEdit->northSideZMinus.minHeight += corrector;
+				terraiEdit->northSideZMinus.maxHeight += corrector;
+			}
 		}
 	}
 		
-	void MeshCacheBuffer::applyWorldModifier(int level, size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, std::vector<float>& vectGridHeights, float& minHeight, float& maxHeight, WorldModifier& wm)
+	void MeshCacheBuffer::applyWorldModifier(int level, size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, TerrainEdit* terraiEdit, std::vector<float>& vectGridHeights, WorldModifier& wm)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer applyWorldModifier 1 ") + __FUNCTION__, "ALL");
 
@@ -832,6 +988,18 @@ namespace TheWorld_Utils
 				return;
 		}
 
+		terraiEdit->eastSideXPlus.minHeight = FLT_MAX;
+		terraiEdit->eastSideXPlus.maxHeight = FLT_MIN;
+
+		terraiEdit->westSideXMinus.minHeight = FLT_MAX;
+		terraiEdit->westSideXMinus.maxHeight = FLT_MIN;
+
+		terraiEdit->southSideZPlus.minHeight = FLT_MAX;
+		terraiEdit->southSideZPlus.maxHeight = FLT_MIN;
+
+		terraiEdit->northSideZMinus.minHeight = FLT_MAX;
+		terraiEdit->northSideZMinus.maxHeight = FLT_MIN;
+
 		size_t idx = -1;
 		for (int z = 0; z < numVerticesPerSize; z++)
 			for (int x = 0; x < numVerticesPerSize; x++)
@@ -857,15 +1025,48 @@ namespace TheWorld_Utils
 				{
 					if (idx == 0)
 					{
-						minHeight = maxHeight = vectGridHeights[idx];
+						terraiEdit->minHeight = terraiEdit->maxHeight = vectGridHeights[idx];
 					}
 					else
 					{
-						if (vectGridHeights[idx] < minHeight)
-							minHeight = vectGridHeights[idx];
-						if (vectGridHeights[idx] > maxHeight)
-							maxHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] < terraiEdit->minHeight)
+							terraiEdit->minHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] > terraiEdit->maxHeight)
+							terraiEdit->maxHeight = vectGridHeights[idx];
 					}
+					
+					if (x == 0)
+					{
+						if (vectGridHeights[idx] < terraiEdit->westSideXMinus.minHeight)
+							terraiEdit->westSideXMinus.minHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] > terraiEdit->westSideXMinus.maxHeight)
+							terraiEdit->westSideXMinus.maxHeight = vectGridHeights[idx];
+					}
+
+					if (z == 0)
+					{
+						if (vectGridHeights[idx] < terraiEdit->northSideZMinus.minHeight)
+							terraiEdit->northSideZMinus.minHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] > terraiEdit->northSideZMinus.maxHeight)
+							terraiEdit->northSideZMinus.maxHeight = vectGridHeights[idx];
+					}
+
+					if (x == numVerticesPerSize - 1)
+					{
+						if (vectGridHeights[idx] < terraiEdit->eastSideXPlus.minHeight)
+							terraiEdit->eastSideXPlus.minHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] > terraiEdit->eastSideXPlus.maxHeight)
+							terraiEdit->eastSideXPlus.maxHeight = vectGridHeights[idx];
+					}
+
+					if (z == numVerticesPerSize - 1)
+					{
+						if (vectGridHeights[idx] < terraiEdit->southSideZPlus.minHeight)
+							terraiEdit->southSideZPlus.minHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] > terraiEdit->southSideZPlus.maxHeight)
+							terraiEdit->southSideZPlus.maxHeight = vectGridHeights[idx];
+					}
+
 					continue;
 				}
 
@@ -933,14 +1134,46 @@ namespace TheWorld_Utils
 
 				if (idx == 0)
 				{
-					minHeight = maxHeight = vectGridHeights[idx];
+					terraiEdit->minHeight = terraiEdit->maxHeight = vectGridHeights[idx];
 				}
 				else
 				{
-					if (vectGridHeights[idx] < minHeight)
-						minHeight = vectGridHeights[idx];
-					if (vectGridHeights[idx] > maxHeight)
-						maxHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] < terraiEdit->minHeight)
+						terraiEdit->minHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] > terraiEdit->maxHeight)
+						terraiEdit->maxHeight = vectGridHeights[idx];
+				}
+
+				if (x == 0)
+				{
+					if (vectGridHeights[idx] < terraiEdit->westSideXMinus.minHeight)
+						terraiEdit->westSideXMinus.minHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] > terraiEdit->westSideXMinus.maxHeight)
+						terraiEdit->westSideXMinus.maxHeight = vectGridHeights[idx];
+				}
+
+				if (z == 0)
+				{
+					if (vectGridHeights[idx] < terraiEdit->northSideZMinus.minHeight)
+						terraiEdit->northSideZMinus.minHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] > terraiEdit->northSideZMinus.maxHeight)
+						terraiEdit->northSideZMinus.maxHeight = vectGridHeights[idx];
+				}
+
+				if (x == numVerticesPerSize - 1)
+				{
+					if (vectGridHeights[idx] < terraiEdit->eastSideXPlus.minHeight)
+						terraiEdit->eastSideXPlus.minHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] > terraiEdit->eastSideXPlus.maxHeight)
+						terraiEdit->eastSideXPlus.maxHeight = vectGridHeights[idx];
+				}
+
+				if (z == numVerticesPerSize - 1)
+				{
+					if (vectGridHeights[idx] < terraiEdit->southSideZPlus.minHeight)
+						terraiEdit->southSideZPlus.minHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] > terraiEdit->southSideZPlus.maxHeight)
+						terraiEdit->southSideZPlus.maxHeight = vectGridHeights[idx];
 				}
 			}
 	}
@@ -1092,16 +1325,16 @@ namespace TheWorld_Utils
 		normalsBuffer.adjustSize(usedBufferSize);
 	}
 
-	void MeshCacheBuffer::setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, std::string& buffer)
+	void MeshCacheBuffer::setBufferFromCacheData(size_t numVerticesPerSize, CacheData& cacheData, std::string& buffer)
 	{
 		TheWorld_Utils::MemoryBuffer _buffer;
-		setBufferFromCacheData(numVerticesPerSize, gridStepInWU, cacheData, _buffer);
+		setBufferFromCacheData(numVerticesPerSize, cacheData, _buffer);
 		buffer.clear();
 		buffer.reserve(_buffer.size());
 		buffer.assign((char*)_buffer.ptr(), _buffer.size());
 	}
 
-	void MeshCacheBuffer::setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, TheWorld_Utils::MemoryBuffer& buffer)
+	void MeshCacheBuffer::setBufferFromCacheData(size_t numVerticesPerSize, CacheData& cacheData, TheWorld_Utils::MemoryBuffer& buffer)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1 ") + __FUNCTION__, "ALL");
 
@@ -1119,66 +1352,83 @@ namespace TheWorld_Utils
 		my_assert(numNormals == 0 || numNormals == numVerticesPerSize * numVerticesPerSize);
 
 		
-		TheWorld_Utils::MemoryBuffer flatFloat16HeightsBuffer;
+		static std::recursive_mutex s_mtxEmptyBuffer;
+		static TheWorld_Utils::MemoryBuffer s_flatFloat16HeightsBuffer;
 		TheWorld_Utils::MemoryBuffer* _flatFloat16HeightsBuffer = cacheData.heights16Buffer;
-		TheWorld_Utils::MemoryBuffer flatFloat32HeightsBuffer;
+		static TheWorld_Utils::MemoryBuffer s_flatFloat32HeightsBuffer;
 		TheWorld_Utils::MemoryBuffer* _flatFloat32HeightsBuffer = cacheData.heights32Buffer;
 		if (numHeights16 == 0)
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1.1 ") + __FUNCTION__, "gen flat heights");
 
-			_flatFloat16HeightsBuffer = &flatFloat16HeightsBuffer;
-			_flatFloat32HeightsBuffer = &flatFloat32HeightsBuffer;
+			_flatFloat16HeightsBuffer = &s_flatFloat16HeightsBuffer;
+			_flatFloat32HeightsBuffer = &s_flatFloat32HeightsBuffer;
 
 			numHeights32 = numHeights16 = numVerticesPerSize * numVerticesPerSize;
 			
-			size_t float16HeightsBufferSize = numVerticesPerSize * numVerticesPerSize * sizeof(uint16_t);
-			flatFloat16HeightsBuffer.reserve(float16HeightsBufferSize);
-			uint16_t* _float16HeightsBuffer = (uint16_t*)flatFloat16HeightsBuffer.ptr();
-			size_t float32HeightsBufferSize = numVerticesPerSize * numVerticesPerSize * sizeof(float);
-			flatFloat32HeightsBuffer.reserve(float32HeightsBufferSize);
-			float* _float32HeightsBuffer = (float*)flatFloat32HeightsBuffer.ptr();
-			TheWorld_Utils::FLOAT_32 f(0.0f);
-			uint16_t empyHalf = half_from_float(f.u32);
-			{		// first impl.
-				for (size_t z = 0; z < numVerticesPerSize; z++)
-					for (size_t x = 0; x < numVerticesPerSize; x++)
-					{
-						*_float16HeightsBuffer = empyHalf;
-						_float16HeightsBuffer++;
-						*_float32HeightsBuffer = 0.0f;
-						_float32HeightsBuffer++;
+			{
+				std::lock_guard<std::recursive_mutex> lock(s_mtxEmptyBuffer);
+				
+				size_t float16HeightsBufferSize = numVerticesPerSize * numVerticesPerSize * sizeof(uint16_t);
+				size_t float32HeightsBufferSize = numVerticesPerSize * numVerticesPerSize * sizeof(float);
+
+				if (s_flatFloat16HeightsBuffer.size() == 0 || s_flatFloat32HeightsBuffer.size() == 0)
+				{
+					s_flatFloat16HeightsBuffer.reserve(float16HeightsBufferSize);
+					uint16_t* _float16HeightsBuffer = (uint16_t*)s_flatFloat16HeightsBuffer.ptr();
+					s_flatFloat32HeightsBuffer.reserve(float32HeightsBufferSize);
+					float* _float32HeightsBuffer = (float*)s_flatFloat32HeightsBuffer.ptr();
+
+					TheWorld_Utils::FLOAT_32 f(0.0f);
+					uint16_t emptyHalf = half_from_float(f.u32);
+					{		// first impl.
+						for (size_t z = 0; z < numVerticesPerSize; z++)
+							for (size_t x = 0; x < numVerticesPerSize; x++)
+							{
+								*_float16HeightsBuffer = emptyHalf;
+								_float16HeightsBuffer++;
+								*_float32HeightsBuffer = 0.0f;
+								_float32HeightsBuffer++;
+							}
 					}
+
+					//{		// second impl.
+					//	BYTE* _float16HeightsBufferBegin = (BYTE*)_float16HeightsBuffer;
+					//	BYTE* _float32HeightsBufferBegin = (BYTE*)_float32HeightsBuffer;
+					//	size_t numVerticesPerSizeMinusOne = numVerticesPerSize - 1;
+					//	assert(TheWorld_Utils::Utils::isPowerOfTwo(int(numVerticesPerSizeMinusOne)));
+					//	size_t exponent = (size_t)log2(numVerticesPerSizeMinusOne * numVerticesPerSizeMinusOne);
+					//	*_float16HeightsBuffer = empyHalf;
+					//	_float16HeightsBuffer++; 
+					//	*_float32HeightsBuffer = 0.0f;
+					//	_float32HeightsBuffer++;
+					//	for (int i = 0; i < exponent; i++)
+					//	{
+					//		size_t length16 = (BYTE*)_float16HeightsBuffer - _float16HeightsBufferBegin;
+					//		size_t length32 = (BYTE*)_float32HeightsBuffer - _float32HeightsBufferBegin;
+					//		memcpy(_float16HeightsBuffer, _float16HeightsBufferBegin, length16);
+					//		_float16HeightsBuffer = (uint16_t*)((BYTE*)_float16HeightsBuffer + length16);
+					//		memcpy(_float32HeightsBuffer, _float32HeightsBufferBegin, length32);
+					//		_float32HeightsBuffer = (float*)((BYTE*)_float32HeightsBuffer + length32);
+					//	}
+					//	size_t remaining = (numVerticesPerSize * numVerticesPerSize) - (numVerticesPerSizeMinusOne * numVerticesPerSizeMinusOne);
+					//	memcpy(_float16HeightsBuffer, _float16HeightsBufferBegin, remaining * sizeof(uint16_t));
+					//	_float16HeightsBuffer += remaining;
+					//	memcpy(_float32HeightsBuffer, _float32HeightsBufferBegin, remaining * sizeof(float));
+					//	_float32HeightsBuffer += remaining;
+					//}
+
+					assert((BYTE*)_float16HeightsBuffer - s_flatFloat16HeightsBuffer.ptr() == float16HeightsBufferSize);
+					s_flatFloat16HeightsBuffer.adjustSize(float16HeightsBufferSize);
+					assert((BYTE*)_float32HeightsBuffer - s_flatFloat32HeightsBuffer.ptr() == float32HeightsBufferSize);
+					s_flatFloat32HeightsBuffer.adjustSize(float32HeightsBufferSize);
+				}
+				else
+				{
+					assert(float16HeightsBufferSize == _flatFloat16HeightsBuffer->size());
+					assert(float32HeightsBufferSize == _flatFloat32HeightsBuffer->size());
+				}
 			}
-			//{		// second impl.
-			//	BYTE* _float16HeightsBufferBegin = (BYTE*)_float16HeightsBuffer;
-			//	BYTE* _float32HeightsBufferBegin = (BYTE*)_float32HeightsBuffer;
-			//	size_t numVerticesPerSizeMinusOne = numVerticesPerSize - 1;
-			//	assert(TheWorld_Utils::Utils::isPowerOfTwo(int(numVerticesPerSizeMinusOne)));
-			//	size_t exponent = (size_t)log2(numVerticesPerSizeMinusOne * numVerticesPerSizeMinusOne);
-			//	*_float16HeightsBuffer = empyHalf;
-			//	_float16HeightsBuffer++; 
-			//	*_float32HeightsBuffer = 0.0f;
-			//	_float32HeightsBuffer++;
-			//	for (int i = 0; i < exponent; i++)
-			//	{
-			//		size_t length16 = (BYTE*)_float16HeightsBuffer - _float16HeightsBufferBegin;
-			//		size_t length32 = (BYTE*)_float32HeightsBuffer - _float32HeightsBufferBegin;
-			//		memcpy(_float16HeightsBuffer, _float16HeightsBufferBegin, length16);
-			//		_float16HeightsBuffer = (uint16_t*)((BYTE*)_float16HeightsBuffer + length16);
-			//		memcpy(_float32HeightsBuffer, _float32HeightsBufferBegin, length32);
-			//		_float32HeightsBuffer = (float*)((BYTE*)_float32HeightsBuffer + length32);
-			//	}
-			//	size_t remaining = (numVerticesPerSize * numVerticesPerSize) - (numVerticesPerSizeMinusOne * numVerticesPerSizeMinusOne);
-			//	memcpy(_float16HeightsBuffer, _float16HeightsBufferBegin, remaining * sizeof(uint16_t));
-			//	_float16HeightsBuffer += remaining;
-			//	memcpy(_float32HeightsBuffer, _float32HeightsBufferBegin, remaining * sizeof(float));
-			//	_float32HeightsBuffer += remaining;
-			//}
-			assert((BYTE*)_float16HeightsBuffer - flatFloat16HeightsBuffer.ptr() == float16HeightsBufferSize);
-			flatFloat16HeightsBuffer.adjustSize(float16HeightsBufferSize);
-			assert((BYTE*)_float32HeightsBuffer - flatFloat32HeightsBuffer.ptr() == float32HeightsBufferSize);
-			flatFloat32HeightsBuffer.adjustSize(float32HeightsBufferSize);
 		}
 
 		size_t float16HeightmapSize = numHeights16 * sizeof(uint16_t);
@@ -1263,7 +1513,7 @@ namespace TheWorld_Utils
 		buffer.adjustSize(streamBufferSize);
 	}
 
-	void MeshCacheBuffer::setEmptyBuffer(size_t numVerticesPerSize, float gridStepInWU, std::string& meshId, TheWorld_Utils::MemoryBuffer& buffer)
+	void MeshCacheBuffer::setEmptyBuffer(size_t numVerticesPerSize, std::string& meshId, TheWorld_Utils::MemoryBuffer& buffer)
 	{
 		meshId = generateNewMeshId();
 		
@@ -1272,7 +1522,7 @@ namespace TheWorld_Utils
 		//BYTE shortBuffer[256 + 1];	size_t size = 0;
 		//TheWorld_Utils::serializeToByteStream<size_t>(sizeof(size_t), shortBuffer, size);
 		TheWorld_Utils::TerrainEdit terrainEdit;
-		TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*) & terrainEdit, sizeof(TheWorld_Utils::TerrainEdit));
+		TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*)&terrainEdit, terrainEdit.size);
 		cacheData.minHeight = 0.0f;
 		cacheData.maxHeight = 0.0f;
 		cacheData.terrainEditValues = &terrainEditValuesBuffer;
@@ -1283,7 +1533,7 @@ namespace TheWorld_Utils
 		cacheData.heights32Buffer = &emptyFloat32HeightsBuffer;
 		cacheData.normalsBuffer = &emptyNormalBuffer;
 
-		setBufferFromCacheData(numVerticesPerSize, gridStepInWU, cacheData, buffer);
+		setBufferFromCacheData(numVerticesPerSize, cacheData, buffer);
 	}
 
 	void MeshCacheBuffer::setBufferFromHeights(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude, bool generateNormals)

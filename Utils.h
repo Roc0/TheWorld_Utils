@@ -162,17 +162,34 @@ namespace TheWorld_Utils
 		int warpNoiseFractalOctaves;
 		float warpNoiseFractalLacunarity;
 		float warpNoiseFractalGain;
+
+		unsigned int amplitude;		// range of heights in WU (noise is from -1 to 1)
+		float scaleFactor;
+		float desideredMinHeight;
 	};
 	
+	class TerrainSideInfo
+	{
+	public:
+		bool needBlend;
+		float minHeight;
+		float maxHeight;
+	};
+
 	class TerrainEdit
 	{
 	public:
 		enum class TerrainType
 		{
 			unknown = 0
-			,noise_1 = 1
-			,campaign_1 = 2
-			,campaign_2 = 3
+			, jagged_1 = 1
+			, campaign_1 = 2
+			, low_hills = 3
+			, high_hills = 4
+			, low_mountains = 5
+			, high_mountains_1 = 6
+			, high_mountains_2 = 7
+			, noise_1 = 8
 		};
 
 		size_t size;
@@ -180,11 +197,15 @@ namespace TheWorld_Utils
 		bool normalsNeedRegen;
 		enum class TerrainType terrainType;
 
-		NoiseValues noise;
-
-		unsigned int amplitude;		// range of heights in WU (noise is from -1 to 1)
 		float minHeight;
 		float maxHeight;
+
+		TerrainSideInfo eastSideXPlus;	// X growing
+		TerrainSideInfo westSideXMinus;	// X lowering
+		TerrainSideInfo southSideZPlus;	// Z growing
+		TerrainSideInfo northSideZMinus;	// Z lowering
+
+		NoiseValues noise;
 
 		__declspec(dllexport) TerrainEdit(enum class TerrainEdit::TerrainType terrainType = TerrainEdit::TerrainType::campaign_1);
 		__declspec(dllexport) void init(enum class TerrainEdit::TerrainType terrainType);
@@ -323,6 +344,18 @@ namespace TheWorld_Utils
 		};
 
 	public:
+		// char "0"
+		// size_t	mesh id size
+		// char*	mesh id
+		// size_t	class TerrainEdit size
+		// TerrainEdit deserialized
+		// size_t num vertices
+		//		float	min heigth		==> num vertices > 0
+		//		float	man heigth		==> num vertices > 0
+		//		float16 heightmap		(with size = num vertices * sizeof(uint16_t)) ==> num vertices > 0
+		//		float32 heightmap		(with size = num vertices * sizeof(float)) ==> num vertices > 0
+		//		RGB normalmap			(with size = num vertices * sizeof(RGB) oppure = sizeof(RGB) se il primo colore ha r=0, g=0, b=0) ==> num vertices > 0
+
 		__declspec(dllexport) MeshCacheBuffer(void);
 		__declspec(dllexport) ~MeshCacheBuffer(void);
 		__declspec(dllexport) MeshCacheBuffer(std::string cacheDir, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex);
@@ -343,11 +376,11 @@ namespace TheWorld_Utils
 		__declspec(dllexport) void writeBufferToCache(TheWorld_Utils::MemoryBuffer& buffer, bool renewMeshId = false);
 		__declspec(dllexport) void writeBufferToCache(const BYTE* buffer, const size_t bufferSize, bool renewMeshId = false);
 		__declspec(dllexport) void setBufferFromHeights(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude, bool generateNormals);
-		__declspec(dllexport) void setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, TheWorld_Utils::MemoryBuffer& buffer);
-		__declspec(dllexport) void setBufferFromCacheData(size_t numVerticesPerSize, float gridStepInWU, CacheData& cacheData, std::string& buffer);
-		__declspec(dllexport) void setEmptyBuffer(size_t numVerticesPerSize, float gridStepInWU, std::string& meshId, TheWorld_Utils::MemoryBuffer& buffer);
-		__declspec(dllexport) void generateHeights(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, NoiseValues& noise, unsigned int amplitude, std::vector<float>& vectGridHeights, float& minHeight, float& maxHeight);
-		__declspec(dllexport) void applyWorldModifier(int level, size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, std::vector<float>& vectGridHeights, float& minHeight, float& maxHeight, WorldModifier& wm);
+		__declspec(dllexport) void setBufferFromCacheData(size_t numVerticesPerSize, CacheData& cacheData, TheWorld_Utils::MemoryBuffer& buffer);
+		__declspec(dllexport) void setBufferFromCacheData(size_t numVerticesPerSize, CacheData& cacheData, std::string& buffer);
+		__declspec(dllexport) void setEmptyBuffer(size_t numVerticesPerSize, std::string& meshId, TheWorld_Utils::MemoryBuffer& buffer);
+		__declspec(dllexport) void generateHeightsWithNoise(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, TerrainEdit* terraiEdit, std::vector<float>& vectGridHeights);
+		__declspec(dllexport) void applyWorldModifier(int level, size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, TerrainEdit* terraiEdit, std::vector<float>& vectGridHeights, WorldModifier& wm);
 		__declspec(dllexport) void generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, TheWorld_Utils::MemoryBuffer& normalsBuffer);
 		__declspec(dllexport) void generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, BYTE* normalsBuffer, const size_t normalsBufferSize, size_t& usedBufferSize);
 		//__declspec(dllexport) std::string getCacheDir()
