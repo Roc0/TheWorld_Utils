@@ -191,8 +191,11 @@ namespace TheWorld_Utils
 				throw(std::exception((std::string(__FUNCTION__) + std::string("Allocation error")).c_str()));
 			m_bufferSize = newLen;
 
-			memcpy(ptr, m_ptr, m_size);
-			::free(m_ptr);
+			if (m_ptr != nullptr)
+			{
+				memcpy(ptr, m_ptr, m_size);
+				::free(m_ptr);
+			}
 			m_ptr = ptr;
 		}
 	}
@@ -233,6 +236,14 @@ namespace TheWorld_Utils
 	void MemoryBuffer::adjustSize(size_t size)
 	{
 		m_size = size;
+	}
+
+	void MemoryBuffer::copyFrom(MemoryBuffer& inBuffer)
+	{
+		clear();
+		reserve(inBuffer.reserved());
+		memcpy(m_ptr, inBuffer.ptr(), inBuffer.size());
+		m_size = inBuffer.size();
 	}
 
 	void MemoryBuffer::populateFloatVector(std::vector<float>& v)
@@ -1325,27 +1336,27 @@ namespace TheWorld_Utils
 		normalsBuffer.adjustSize(usedBufferSize);
 	}
 
-	void MeshCacheBuffer::setBufferFromCacheData(size_t numVerticesPerSize, CacheData& cacheData, std::string& buffer)
+	void MeshCacheBuffer::setBufferFromCacheQuadrantData(size_t numVerticesPerSize, CacheQuadrantData& cacheQuadrantData, std::string& buffer)
 	{
 		TheWorld_Utils::MemoryBuffer _buffer;
-		setBufferFromCacheData(numVerticesPerSize, cacheData, _buffer);
+		setBufferFromCacheQuadrantData(numVerticesPerSize, cacheQuadrantData, _buffer);
 		buffer.clear();
 		buffer.reserve(_buffer.size());
 		buffer.assign((char*)_buffer.ptr(), _buffer.size());
 	}
 
-	void MeshCacheBuffer::setBufferFromCacheData(size_t numVerticesPerSize, CacheData& cacheData, TheWorld_Utils::MemoryBuffer& buffer)
+	void MeshCacheBuffer::setBufferFromCacheQuadrantData(size_t numVerticesPerSize, CacheQuadrantData& cacheQuadrantData, TheWorld_Utils::MemoryBuffer& buffer)
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1 ") + __FUNCTION__, "ALL");
+		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheQuadrantData 1 ") + __FUNCTION__, "ALL");
 
 		size_t size = 0;
 
-		size_t numHeights16 = cacheData.heights16Buffer->size() / sizeof(uint16_t);
-		my_assert(cacheData.heights16Buffer->size() == numHeights16 * sizeof(uint16_t));
-		size_t numHeights32 = cacheData.heights32Buffer->size() / sizeof(float);
-		my_assert(cacheData.heights32Buffer->size() == numHeights32 * sizeof(float));
-		size_t numNormals = cacheData.normalsBuffer->size() / sizeof(TheWorld_Utils::_RGB);
-		my_assert(cacheData.normalsBuffer->size() == numNormals * sizeof(TheWorld_Utils::_RGB));
+		size_t numHeights16 = cacheQuadrantData.heights16Buffer->size() / sizeof(uint16_t);
+		my_assert(cacheQuadrantData.heights16Buffer->size() == numHeights16 * sizeof(uint16_t));
+		size_t numHeights32 = cacheQuadrantData.heights32Buffer->size() / sizeof(float);
+		my_assert(cacheQuadrantData.heights32Buffer->size() == numHeights32 * sizeof(float));
+		size_t numNormals = cacheQuadrantData.normalsBuffer->size() / sizeof(TheWorld_Utils::_RGB);
+		my_assert(cacheQuadrantData.normalsBuffer->size() == numNormals * sizeof(TheWorld_Utils::_RGB));
 
 		my_assert(numHeights16 == numHeights32);
 		my_assert(numHeights16 == 0 || numHeights16 == numVerticesPerSize * numVerticesPerSize);
@@ -1354,12 +1365,12 @@ namespace TheWorld_Utils
 		
 		static std::recursive_mutex s_mtxEmptyBuffer;
 		static TheWorld_Utils::MemoryBuffer s_flatFloat16HeightsBuffer;
-		TheWorld_Utils::MemoryBuffer* _flatFloat16HeightsBuffer = cacheData.heights16Buffer;
+		TheWorld_Utils::MemoryBuffer* _flatFloat16HeightsBuffer = cacheQuadrantData.heights16Buffer;
 		static TheWorld_Utils::MemoryBuffer s_flatFloat32HeightsBuffer;
-		TheWorld_Utils::MemoryBuffer* _flatFloat32HeightsBuffer = cacheData.heights32Buffer;
+		TheWorld_Utils::MemoryBuffer* _flatFloat32HeightsBuffer = cacheQuadrantData.heights32Buffer;
 		if (numHeights16 == 0)
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1.1 ") + __FUNCTION__, "gen flat heights");
+			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheQuadrantData 1.1 ") + __FUNCTION__, "gen flat heights");
 
 			_flatFloat16HeightsBuffer = &s_flatFloat16HeightsBuffer;
 			_flatFloat32HeightsBuffer = &s_flatFloat32HeightsBuffer;
@@ -1435,8 +1446,8 @@ namespace TheWorld_Utils
 		size_t float32HeightmapSize = numHeights32 * sizeof(float);
 		size_t normalmapSize = numNormals > 0 ? numNormals * sizeof(TheWorld_Utils::_RGB) : sizeof(TheWorld_Utils::_RGB);
 		size_t streamBufferSize = 1 /* "0" */
-			+ sizeof(size_t) + cacheData.meshId.length()
-			+ sizeof(size_t) + cacheData.terrainEditValues->size()
+			+ sizeof(size_t) + cacheQuadrantData.meshId.length()
+			+ sizeof(size_t) + cacheQuadrantData.terrainEditValues->size()
 			+ sizeof(size_t); /* numheights */
 		if (numHeights16 > 0)
 		{
@@ -1452,24 +1463,24 @@ namespace TheWorld_Utils
 		BYTE* _streamBuffer = buffer.ptr();
 
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1.2 ") + __FUNCTION__, "copy meshId/edit values");
+			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheQuadrantData 1.2 ") + __FUNCTION__, "copy meshId/edit values");
 
 			memcpy(_streamBuffer, "0", 1);
 			_streamBuffer++;
 
-			TheWorld_Utils::serializeToByteStream<size_t>(cacheData.meshId.length(), _streamBuffer, size);
+			TheWorld_Utils::serializeToByteStream<size_t>(cacheQuadrantData.meshId.length(), _streamBuffer, size);
 			_streamBuffer += size;
 
-			memcpy(_streamBuffer, cacheData.meshId.c_str(), cacheData.meshId.length());
-			_streamBuffer += cacheData.meshId.length();
+			memcpy(_streamBuffer, cacheQuadrantData.meshId.c_str(), cacheQuadrantData.meshId.length());
+			_streamBuffer += cacheQuadrantData.meshId.length();
 
-			TheWorld_Utils::serializeToByteStream<size_t>(cacheData.terrainEditValues->size(), _streamBuffer, size);
+			TheWorld_Utils::serializeToByteStream<size_t>(cacheQuadrantData.terrainEditValues->size(), _streamBuffer, size);
 			_streamBuffer += size;
 
-			if (cacheData.terrainEditValues->size() > 0)
+			if (cacheQuadrantData.terrainEditValues->size() > 0)
 			{
-				memcpy(_streamBuffer, cacheData.terrainEditValues->ptr(), cacheData.terrainEditValues->size());
-				_streamBuffer += cacheData.terrainEditValues->size();
+				memcpy(_streamBuffer, cacheQuadrantData.terrainEditValues->ptr(), cacheQuadrantData.terrainEditValues->size());
+				_streamBuffer += cacheQuadrantData.terrainEditValues->size();
 			}
 		}
 
@@ -1479,12 +1490,12 @@ namespace TheWorld_Utils
 
 		if (numHeights16 > 0)
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1.3 ") + __FUNCTION__, "copy heights");
+			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheQuadrantData 1.3 ") + __FUNCTION__, "copy heights");
 
-			TheWorld_Utils::serializeToByteStream<float>(cacheData.minHeight, _streamBuffer, size);
+			TheWorld_Utils::serializeToByteStream<float>(cacheQuadrantData.minHeight, _streamBuffer, size);
 			_streamBuffer += size;
 
-			TheWorld_Utils::serializeToByteStream<float>(cacheData.maxHeight, _streamBuffer, size);
+			TheWorld_Utils::serializeToByteStream<float>(cacheQuadrantData.maxHeight, _streamBuffer, size);
 			_streamBuffer += size;
 
 			memcpy(_streamBuffer, _flatFloat16HeightsBuffer->ptr(), float16HeightmapSize);
@@ -1496,9 +1507,9 @@ namespace TheWorld_Utils
 
 		if (numNormals > 0)
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheData 1.4 ") + __FUNCTION__, "copy normals");
+			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromCacheQuadrantData 1.4 ") + __FUNCTION__, "copy normals");
 
-			memcpy(_streamBuffer, cacheData.normalsBuffer->ptr(), normalmapSize);
+			memcpy(_streamBuffer, cacheQuadrantData.normalsBuffer->ptr(), normalmapSize);
 			_streamBuffer += normalmapSize;
 		}
 		else
@@ -1517,23 +1528,23 @@ namespace TheWorld_Utils
 	{
 		meshId = generateNewMeshId();
 		
-		TheWorld_Utils::MeshCacheBuffer::CacheData cacheData;
-		cacheData.meshId = meshId;
+		TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData cacheQuadrantData;
+		cacheQuadrantData.meshId = meshId;
 		//BYTE shortBuffer[256 + 1];	size_t size = 0;
 		//TheWorld_Utils::serializeToByteStream<size_t>(sizeof(size_t), shortBuffer, size);
 		TheWorld_Utils::TerrainEdit terrainEdit;
 		TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*)&terrainEdit, terrainEdit.size);
-		cacheData.minHeight = 0.0f;
-		cacheData.maxHeight = 0.0f;
-		cacheData.terrainEditValues = &terrainEditValuesBuffer;
+		cacheQuadrantData.minHeight = 0.0f;
+		cacheQuadrantData.maxHeight = 0.0f;
+		cacheQuadrantData.terrainEditValues = &terrainEditValuesBuffer;
 		TheWorld_Utils::MemoryBuffer emptyFloat16HeightsBuffer;
 		TheWorld_Utils::MemoryBuffer emptyFloat32HeightsBuffer;
 		TheWorld_Utils::MemoryBuffer emptyNormalBuffer;
-		cacheData.heights16Buffer = &emptyFloat16HeightsBuffer;
-		cacheData.heights32Buffer = &emptyFloat32HeightsBuffer;
-		cacheData.normalsBuffer = &emptyNormalBuffer;
+		cacheQuadrantData.heights16Buffer = &emptyFloat16HeightsBuffer;
+		cacheQuadrantData.heights32Buffer = &emptyFloat32HeightsBuffer;
+		cacheQuadrantData.normalsBuffer = &emptyNormalBuffer;
 
-		setBufferFromCacheData(numVerticesPerSize, cacheData, buffer);
+		setBufferFromCacheQuadrantData(numVerticesPerSize, cacheQuadrantData, buffer);
 	}
 
 	void MeshCacheBuffer::setBufferFromHeights(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude, bool generateNormals)
@@ -1722,6 +1733,395 @@ namespace TheWorld_Utils
 		}
 
 		m_meshId = meshId;
+	}
+
+	bool MeshCacheBuffer::blendQuadrant(size_t numVerticesPerSize, float gridStepInWU, bool lastPhase,
+		CacheQuadrantData& data,
+		CacheQuadrantData& northData,
+		CacheQuadrantData& southData,
+		CacheQuadrantData& westData,
+		CacheQuadrantData& eastData,
+		CacheQuadrantData& northwestData,
+		CacheQuadrantData& northeastData,
+		CacheQuadrantData& southwesthData,
+		CacheQuadrantData& southeastData)
+	{
+		bool updated = false;
+
+		TerrainEdit* terrainEdit = (TerrainEdit*)data.terrainEditValues->ptr();
+		if (!terrainEdit->northSideZMinus.needBlend && !terrainEdit->southSideZPlus.needBlend && !terrainEdit->eastSideXPlus.needBlend && !terrainEdit->westSideXMinus.needBlend)
+			return updated;
+		
+		if(blendQuadrantOnNorthSide(numVerticesPerSize, gridStepInWU, lastPhase, data, northData, southData, westData, eastData, northwestData, northeastData, southwesthData, southeastData))
+			updated = true;
+
+		if (blendQuadrantOnSouthSide(numVerticesPerSize, gridStepInWU, lastPhase, data, northData, southData, westData, eastData, northwestData, northeastData, southwesthData, southeastData))
+			updated = true;
+
+		if (blendQuadrantOnWestSide(numVerticesPerSize, gridStepInWU, lastPhase, data, northData, southData, westData, eastData, northwestData, northeastData, southwesthData, southeastData))
+			updated = true;
+
+		if (blendQuadrantOnEastSide(numVerticesPerSize, gridStepInWU, lastPhase, data, northData, southData, westData, eastData, northwestData, northeastData, southwesthData, southeastData))
+			updated = true;
+
+		if (data.heightsUpdated)
+		{
+			terrainEdit->minHeight = FLT_MAX;
+			terrainEdit->maxHeight = FLT_MIN;
+			for (size_t z = 0; z < numVerticesPerSize; z++)
+				for (size_t x = 0; x < numVerticesPerSize; x++)
+				{
+					float h = data.heights32Buffer->at<float>(x, z, numVerticesPerSize);
+					if (h < terrainEdit->minHeight)
+						terrainEdit->minHeight = h;
+					if (h > terrainEdit->maxHeight)
+						terrainEdit->maxHeight = h;
+				}
+		}
+
+		if (northData.heightsUpdated)
+		{
+			TerrainEdit* northTerrainEdit = (TerrainEdit*)northData.terrainEditValues->ptr();
+			northTerrainEdit->minHeight = FLT_MAX;
+			northTerrainEdit->maxHeight = FLT_MIN;
+			for (size_t z = 0; z < numVerticesPerSize; z++)
+				for (size_t x = 0; x < numVerticesPerSize; x++)
+				{
+					float h = northData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
+					if (h < northTerrainEdit->minHeight)
+						northTerrainEdit->minHeight = h;
+					if (h > northTerrainEdit->maxHeight)
+						northTerrainEdit->maxHeight = h;
+				}
+		}
+
+		if (southData.heightsUpdated)
+		{
+			TerrainEdit* southTerrainEdit = (TerrainEdit*)southData.terrainEditValues->ptr();
+			southTerrainEdit->minHeight = FLT_MAX;
+			southTerrainEdit->maxHeight = FLT_MIN;
+			for (size_t z = 0; z < numVerticesPerSize; z++)
+				for (size_t x = 0; x < numVerticesPerSize; x++)
+				{
+					float h = southData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
+					if (h < southTerrainEdit->minHeight)
+						southTerrainEdit->minHeight = h;
+					if (h > southTerrainEdit->maxHeight)
+						southTerrainEdit->maxHeight = h;
+				}
+		}
+
+		if (westData.heightsUpdated)
+		{
+			TerrainEdit* westTerrainEdit = (TerrainEdit*)westData.terrainEditValues->ptr();
+			westTerrainEdit->minHeight = FLT_MAX;
+			westTerrainEdit->maxHeight = FLT_MIN;
+			for (size_t z = 0; z < numVerticesPerSize; z++)
+				for (size_t x = 0; x < numVerticesPerSize; x++)
+				{
+					float h = westData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
+					if (h < westTerrainEdit->minHeight)
+						westTerrainEdit->minHeight = h;
+					if (h > westTerrainEdit->maxHeight)
+						westTerrainEdit->maxHeight = h;
+				}
+		}
+
+		if (eastData.heightsUpdated)
+		{
+			TerrainEdit* eastTerrainEdit = (TerrainEdit*)eastData.terrainEditValues->ptr();
+			eastTerrainEdit->minHeight = FLT_MAX;
+			eastTerrainEdit->maxHeight = FLT_MIN;
+			for (size_t z = 0; z < numVerticesPerSize; z++)
+				for (size_t x = 0; x < numVerticesPerSize; x++)
+				{
+					float h = eastData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
+					if (h < eastTerrainEdit->minHeight)
+						eastTerrainEdit->minHeight = h;
+					if (h > eastTerrainEdit->maxHeight)
+						eastTerrainEdit->maxHeight = h;
+				}
+		}
+
+		if (northwestData.heightsUpdated)
+		{
+			TerrainEdit* northwestTerrainEdit = (TerrainEdit*)northwestData.terrainEditValues->ptr();
+			northwestTerrainEdit->minHeight = FLT_MAX;
+			northwestTerrainEdit->maxHeight = FLT_MIN;
+			for (size_t z = 0; z < numVerticesPerSize; z++)
+				for (size_t x = 0; x < numVerticesPerSize; x++)
+				{
+					float h = northwestData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
+					if (h < northwestTerrainEdit->minHeight)
+						northwestTerrainEdit->minHeight = h;
+					if (h > northwestTerrainEdit->maxHeight)
+						northwestTerrainEdit->maxHeight = h;
+				}
+		}
+
+		if (northeastData.heightsUpdated)
+		{
+			TerrainEdit* northeastTerrainEdit = (TerrainEdit*)northeastData.terrainEditValues->ptr();
+			northeastTerrainEdit->minHeight = FLT_MAX;
+			northeastTerrainEdit->maxHeight = FLT_MIN;
+			for (size_t z = 0; z < numVerticesPerSize; z++)
+				for (size_t x = 0; x < numVerticesPerSize; x++)
+				{
+					float h = northeastData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
+					if (h < northeastTerrainEdit->minHeight)
+						northeastTerrainEdit->minHeight = h;
+					if (h > northeastTerrainEdit->maxHeight)
+						northeastTerrainEdit->maxHeight = h;
+				}
+		}
+
+		if (southwesthData.heightsUpdated)
+		{
+			TerrainEdit* southwesthTerrainEdit = (TerrainEdit*)southwesthData.terrainEditValues->ptr();
+			southwesthTerrainEdit->minHeight = FLT_MAX;
+			southwesthTerrainEdit->maxHeight = FLT_MIN;
+			for (size_t z = 0; z < numVerticesPerSize; z++)
+				for (size_t x = 0; x < numVerticesPerSize; x++)
+				{
+					float h = southwesthData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
+					if (h < southwesthTerrainEdit->minHeight)
+						southwesthTerrainEdit->minHeight = h;
+					if (h > southwesthTerrainEdit->maxHeight)
+						southwesthTerrainEdit->maxHeight = h;
+				}
+		}
+
+		if (southeastData.heightsUpdated)
+		{
+			TerrainEdit* southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
+			southeastTerrainEdit->minHeight = FLT_MAX;
+			southeastTerrainEdit->maxHeight = FLT_MIN;
+			for (size_t z = 0; z < numVerticesPerSize; z++)
+				for (size_t x = 0; x < numVerticesPerSize; x++)
+				{
+					float h = southeastData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
+					if (h < southeastTerrainEdit->minHeight)
+						southeastTerrainEdit->minHeight = h;
+					if (h > southeastTerrainEdit->maxHeight)
+						southeastTerrainEdit->maxHeight = h;
+				}
+		}
+
+		return updated;
+	}
+
+	bool MeshCacheBuffer::blendQuadrantOnNorthSide(size_t numVerticesPerSize, float gridStepInWU, bool lastPhase,
+		CacheQuadrantData& data,
+		CacheQuadrantData& northData,
+		CacheQuadrantData& southData,
+		CacheQuadrantData& westData,
+		CacheQuadrantData& eastData,
+		CacheQuadrantData& northwestData,
+		CacheQuadrantData& northeastData,
+		CacheQuadrantData& southwestData,
+		CacheQuadrantData& southeastData)
+	{
+		TerrainEdit* terrainEdit = (TerrainEdit*)data.terrainEditValues->ptr();
+		TerrainEdit* northTerrainEdit = nullptr;
+		if (northData.terrainEditValues != nullptr)
+			northTerrainEdit = (TerrainEdit*)northData.terrainEditValues->ptr();
+		//TerrainEdit* southTerrainEdit = nullptr;
+		//if (southData.terrainEditValues != nullptr)
+		//	southTerrainEdit = (TerrainEdit*)southData.terrainEditValues->ptr();
+		TerrainEdit* westTerrainEdit = nullptr;
+		if (westData.terrainEditValues != nullptr)
+			westTerrainEdit = (TerrainEdit*)westData.terrainEditValues->ptr();
+		TerrainEdit* eastTerrainEdit = nullptr;
+		if (eastData.terrainEditValues != nullptr)
+			eastTerrainEdit = (TerrainEdit*)eastData.terrainEditValues->ptr();
+		TerrainEdit* northwestTerrainEdit = nullptr;
+		if (northwestData.terrainEditValues != nullptr)
+			northwestTerrainEdit = (TerrainEdit*)northwestData.terrainEditValues->ptr();
+		TerrainEdit* northeastTerrainEdit = nullptr;
+		if (northeastData.terrainEditValues != nullptr)
+			northeastTerrainEdit = (TerrainEdit*)northeastData.terrainEditValues->ptr();
+		//TerrainEdit* southwestTerrainEdit = nullptr;
+		//if (southwestData.terrainEditValues != nullptr)
+		//	southwestTerrainEdit = (TerrainEdit*)southwestData.terrainEditValues->ptr();
+		//TerrainEdit* southeastTerrainEdit = nullptr;
+		//if (southeastData.terrainEditValues != nullptr)
+		//	southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
+
+		bool updated = false;
+		
+		if (terrainEdit->northSideZMinus.needBlend && northData.heights32Buffer != nullptr)
+		{
+			// moving on north side: every x with z = 0 
+			for (size_t x = 0; x < numVerticesPerSize; x++)
+			{
+				float gapForEachQuandrantOnBorder = abs(data.heights32Buffer->at<float>(x, 0, numVerticesPerSize) - northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize)) / 2;
+				size_t numVerticesToAdjustInEachQuadrant = (size_t)ceilf(gapForEachQuandrantOnBorder / (gridStepInWU / 2));
+				if (numVerticesToAdjustInEachQuadrant > numVerticesPerSize / 2)
+					numVerticesToAdjustInEachQuadrant = numVerticesPerSize / 2;
+
+				if (numVerticesToAdjustInEachQuadrant > 0)
+				{
+					float increment = 0.0f;
+					float averageStep = (abs(data.heights32Buffer->at<float>(x, numVerticesToAdjustInEachQuadrant - 1, numVerticesPerSize)
+								- northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - (numVerticesToAdjustInEachQuadrant - 1), numVerticesPerSize)) / 2) / numVerticesToAdjustInEachQuadrant;
+					//if (data.heights32Buffer->at<float>(x, 0, numVerticesPerSize) > northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize))
+					//	averageStep = -averageStep;
+					//increment = step;
+
+					data.heightsUpdated = true;
+					northData.heightsUpdated = true;
+					updated = true;
+
+					for (int z = (int)numVerticesToAdjustInEachQuadrant - 1; z >= 0; z--)
+					{
+						float currentGapInEachQuadrant = abs(data.heights32Buffer->at<float>(x, z, numVerticesPerSize) - northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize)) / 2;
+						float desideredGapInEachQuadrant = abs(averageStep) * z;
+						if (currentGapInEachQuadrant > desideredGapInEachQuadrant)
+						{
+							increment = currentGapInEachQuadrant - desideredGapInEachQuadrant;
+							if (data.heights32Buffer->at<float>(x, z, numVerticesPerSize) > northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize))
+								increment = -increment;
+						}
+						else
+							increment = 0.0f;
+
+						float h = data.heights32Buffer->at<float>(x, z, numVerticesPerSize);
+						data.heights32Buffer->at<float>(x, z, numVerticesPerSize) += increment;
+						TheWorld_Utils::FLOAT_32 f(data.heights32Buffer->at<float>(x, z, numVerticesPerSize));
+						uint16_t half = half_from_float(f.u32);
+						data.heights16Buffer->at<uint16_t>(x, z, numVerticesPerSize) = half;
+
+						float hNorth = northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize);
+						northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize) -= increment;
+						TheWorld_Utils::FLOAT_32 f1(northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize));
+						uint16_t half1 = half_from_float(f1.u32);
+						northData.heights16Buffer->at<uint16_t>(x, numVerticesPerSize - 1 - z, numVerticesPerSize) = half1;
+
+						if (x == 0)
+							PLOG_DEBUG << "x=" << std::to_string(x) << " z=" << std::to_string(z) << "/" << std::to_string(numVerticesPerSize - 1 - z) << " increment= " << std::to_string(increment) << " " << std::to_string(h) << " ==> " << std::to_string(data.heights32Buffer->at<float>(x, z, numVerticesPerSize)) << " " << std::to_string(hNorth) << " ==> " << std::to_string(northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize));
+
+						// if last phase we need to reconcile vertices on the border of modified quadrants
+						if (x == 0)
+						{
+							if (westData.heights32Buffer != nullptr && westTerrainEdit != nullptr && !westTerrainEdit->eastSideXPlus.needBlend && !terrainEdit->westSideXMinus.needBlend)
+							{
+								if (lastPhase)
+								{
+									westData.heightsUpdated = true;
+									updated = true;
+									westData.heights32Buffer->at<float>(numVerticesPerSize - 1, z, numVerticesPerSize) = f.f32;
+									westData.heights16Buffer->at<float>(numVerticesPerSize - 1, z, numVerticesPerSize) = half;
+								}
+								else
+								{
+									if (westTerrainEdit != nullptr)
+										westTerrainEdit->eastSideXPlus.needBlend = true;
+								}
+							}
+							if (northwestData.heights32Buffer != nullptr && northwestTerrainEdit  != nullptr && !northwestTerrainEdit->eastSideXPlus.needBlend && northTerrainEdit!= nullptr && !northTerrainEdit->westSideXMinus.needBlend)
+							{
+								if (lastPhase)
+								{
+									northwestData.heightsUpdated = true;
+									updated = true;
+									northwestData.heights32Buffer->at<float>(numVerticesPerSize - 1, numVerticesPerSize - 1 - z, numVerticesPerSize) = f1.f32;
+									northwestData.heights16Buffer->at<float>(numVerticesPerSize - 1, numVerticesPerSize - 1 - z, numVerticesPerSize) = half1;
+								}
+								else
+								{
+									if (northwestTerrainEdit != nullptr)
+										northwestTerrainEdit->eastSideXPlus.needBlend = true;
+								}
+							}
+						}
+
+						// if last phase we need to reconcile vertices on the border of modified quadrants
+						if (x == numVerticesPerSize - 1)
+						{
+							if (eastData.heights32Buffer != nullptr && eastTerrainEdit != nullptr && !eastTerrainEdit->westSideXMinus.needBlend && !terrainEdit->eastSideXPlus.needBlend)
+							{
+								if (lastPhase)
+								{
+									eastData.heightsUpdated = true;
+									updated = true;
+									eastData.heights32Buffer->at<float>(0, z, numVerticesPerSize) = f.f32;
+									eastData.heights16Buffer->at<float>(0, z, numVerticesPerSize) = half;
+								}
+								else
+								{
+									if (eastTerrainEdit != nullptr)
+										eastTerrainEdit->westSideXMinus.needBlend = true;
+								}
+							}
+							if (northeastData.heights32Buffer != nullptr && northeastTerrainEdit != nullptr && !northeastTerrainEdit->westSideXMinus.needBlend && northTerrainEdit != nullptr && !northTerrainEdit->eastSideXPlus.needBlend)
+							{
+								if (lastPhase)
+								{
+									northeastData.heightsUpdated = true;
+									updated = true;
+									northeastData.heights32Buffer->at<float>(0, numVerticesPerSize - 1 - z, numVerticesPerSize) = f1.f32;
+									northeastData.heights16Buffer->at<float>(0, numVerticesPerSize - 1 - z, numVerticesPerSize) = half1;
+								}
+								else
+								{
+									if (northeastTerrainEdit != nullptr)
+										northeastTerrainEdit->westSideXMinus.needBlend = true;
+								}
+							}
+						}
+					}
+				}
+			}
+
+			terrainEdit->northSideZMinus.needBlend = false;
+		}
+
+		return updated;
+	}
+
+	bool MeshCacheBuffer::blendQuadrantOnSouthSide(size_t numVerticesPerSize, float gridStepInWU, bool lastPhase,
+		CacheQuadrantData& data,
+		CacheQuadrantData& northData,
+		CacheQuadrantData& southData,
+		CacheQuadrantData& westData,
+		CacheQuadrantData& eastData,
+		CacheQuadrantData& northwestData,
+		CacheQuadrantData& northeastData,
+		CacheQuadrantData& southwesthData,
+		CacheQuadrantData& southeastData)
+	{
+		bool updated = false;
+		return updated;
+	}
+
+	bool MeshCacheBuffer::blendQuadrantOnWestSide(size_t numVerticesPerSize, float gridStepInWU, bool lastPhase,
+		CacheQuadrantData& data,
+		CacheQuadrantData& northData,
+		CacheQuadrantData& southData,
+		CacheQuadrantData& westData,
+		CacheQuadrantData& eastData,
+		CacheQuadrantData& northwestData,
+		CacheQuadrantData& northeastData,
+		CacheQuadrantData& southwesthData,
+		CacheQuadrantData& southeastData)
+	{
+		bool updated = false;
+		return updated;
+	}
+
+	bool MeshCacheBuffer::blendQuadrantOnEastSide(size_t numVerticesPerSize, float gridStepInWU, bool lastPhase,
+		CacheQuadrantData& data,
+		CacheQuadrantData& northData,
+		CacheQuadrantData& southData,
+		CacheQuadrantData& westData,
+		CacheQuadrantData& eastData,
+		CacheQuadrantData& northwestData,
+		CacheQuadrantData& northeastData,
+		CacheQuadrantData& southwesthData,
+		CacheQuadrantData& southeastData)
+	{
+		bool updated = false;
+		return updated;
 	}
 
 	void ThreadPool::Start(std::string label, size_t num_threads, /*const std::function<void()>* threadInitFunction, const std::function<void()>* threadDeinitFunction,*/ ThreadInitDeinit* threadInitDeinit)

@@ -117,8 +117,21 @@ namespace TheWorld_Utils
 		__declspec(dllexport) bool empty(void);
 		__declspec(dllexport) void clear(void);
 		__declspec(dllexport) void adjustSize(size_t size);
+		__declspec(dllexport) void copyFrom(MemoryBuffer& inBuffer);
 		__declspec(dllexport) void populateFloatVector(std::vector<float>& v);
 		__declspec(dllexport) void populateUint16Vector(std::vector<uint16_t>& v);
+		template <typename T> __declspec(dllexport) T& at(size_t idx)
+		{
+			T* ptr = (T*)m_ptr;
+			ptr += idx;
+			return *ptr;
+		}
+		template <typename T> __declspec(dllexport) T& at(size_t x, size_t y, size_t size)
+		{
+			T* ptr = (T*)m_ptr;
+			ptr += ((y * size) + x);
+			return *ptr;
+		}
 		template <typename T> __declspec(dllexport) void populateVector(std::vector<T>& v)
 		{
 			size_t numElements = size() / sizeof(T);
@@ -331,16 +344,18 @@ namespace TheWorld_Utils
 	class MeshCacheBuffer
 	{
 	public:
-		class CacheData
+		class CacheQuadrantData
 		{
 		public:
 			std::string meshId;
-			TheWorld_Utils::MemoryBuffer* terrainEditValues;
-			float minHeight;
-			float maxHeight;
-			TheWorld_Utils::MemoryBuffer* heights16Buffer;
-			TheWorld_Utils::MemoryBuffer* heights32Buffer;
-			TheWorld_Utils::MemoryBuffer* normalsBuffer;
+			TheWorld_Utils::MemoryBuffer* terrainEditValues = nullptr;
+			float minHeight = 0.0f;
+			float maxHeight = 0.0f;
+			TheWorld_Utils::MemoryBuffer* heights16Buffer = nullptr;
+			TheWorld_Utils::MemoryBuffer* heights32Buffer = nullptr;
+			TheWorld_Utils::MemoryBuffer* normalsBuffer = nullptr;
+			bool heightsUpdated = false;
+			bool normalsUpdated = false;
 		};
 
 	public:
@@ -376,13 +391,64 @@ namespace TheWorld_Utils
 		__declspec(dllexport) void writeBufferToCache(TheWorld_Utils::MemoryBuffer& buffer, bool renewMeshId = false);
 		__declspec(dllexport) void writeBufferToCache(const BYTE* buffer, const size_t bufferSize, bool renewMeshId = false);
 		__declspec(dllexport) void setBufferFromHeights(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude, bool generateNormals);
-		__declspec(dllexport) void setBufferFromCacheData(size_t numVerticesPerSize, CacheData& cacheData, TheWorld_Utils::MemoryBuffer& buffer);
-		__declspec(dllexport) void setBufferFromCacheData(size_t numVerticesPerSize, CacheData& cacheData, std::string& buffer);
+		__declspec(dllexport) void setBufferFromCacheQuadrantData(size_t numVerticesPerSize, CacheQuadrantData& cacheQuadrantData, TheWorld_Utils::MemoryBuffer& buffer);
+		__declspec(dllexport) void setBufferFromCacheQuadrantData(size_t numVerticesPerSize, CacheQuadrantData& cacheQuadrantData, std::string& buffer);
 		__declspec(dllexport) void setEmptyBuffer(size_t numVerticesPerSize, std::string& meshId, TheWorld_Utils::MemoryBuffer& buffer);
 		__declspec(dllexport) void generateHeightsWithNoise(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, TerrainEdit* terraiEdit, std::vector<float>& vectGridHeights);
 		__declspec(dllexport) void applyWorldModifier(int level, size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, TerrainEdit* terraiEdit, std::vector<float>& vectGridHeights, WorldModifier& wm);
 		__declspec(dllexport) void generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, TheWorld_Utils::MemoryBuffer& normalsBuffer);
 		__declspec(dllexport) void generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, BYTE* normalsBuffer, const size_t normalsBufferSize, size_t& usedBufferSize);
+		__declspec(dllexport) bool blendQuadrant(size_t numVerticesPerSize, float gridStepInWU, bool lastPhase,
+			CacheQuadrantData& data,
+			CacheQuadrantData& northData,
+			CacheQuadrantData& southData,
+			CacheQuadrantData& westData,
+			CacheQuadrantData& eastData,
+			CacheQuadrantData& northwestData,
+			CacheQuadrantData& northeastData,
+			CacheQuadrantData& southwesthData,
+			CacheQuadrantData& southeastData);
+		__declspec(dllexport) bool blendQuadrantOnNorthSide(size_t numVerticesPerSize, float gridStepInWU, bool lastPhase,
+			CacheQuadrantData& data,
+			CacheQuadrantData& northData,
+			CacheQuadrantData& southData,
+			CacheQuadrantData& westData,
+			CacheQuadrantData& eastData,
+			CacheQuadrantData& northwestData,
+			CacheQuadrantData& northeastData,
+			CacheQuadrantData& southwesthData,
+			CacheQuadrantData& southeastData);
+		__declspec(dllexport) bool blendQuadrantOnSouthSide(size_t numVerticesPerSize, float gridStepInWU, bool lastPhase,
+			CacheQuadrantData& data,
+			CacheQuadrantData& northData,
+			CacheQuadrantData& southData,
+			CacheQuadrantData& westData,
+			CacheQuadrantData& eastData,
+			CacheQuadrantData& northwestData,
+			CacheQuadrantData& northeastData,
+			CacheQuadrantData& southwesthData,
+			CacheQuadrantData& southeastData);
+		__declspec(dllexport) bool blendQuadrantOnWestSide(size_t numVerticesPerSize, float gridStepInWU, bool lastPhase,
+			CacheQuadrantData& data,
+			CacheQuadrantData& northData,
+			CacheQuadrantData& southData,
+			CacheQuadrantData& westData,
+			CacheQuadrantData& eastData,
+			CacheQuadrantData& northwestData,
+			CacheQuadrantData& northeastData,
+			CacheQuadrantData& southwesthData,
+			CacheQuadrantData& southeastData);
+		__declspec(dllexport) bool blendQuadrantOnEastSide(size_t numVerticesPerSize, float gridStepInWU, bool lastPhase,
+			CacheQuadrantData& data,
+			CacheQuadrantData& northData,
+			CacheQuadrantData& southData,
+			CacheQuadrantData& westData,
+			CacheQuadrantData& eastData,
+			CacheQuadrantData& northwestData,
+			CacheQuadrantData& northeastData,
+			CacheQuadrantData& southwesthData,
+			CacheQuadrantData& southeastData);
+
 		//__declspec(dllexport) std::string getCacheDir()
 		//{
 		//	return m_cacheDir;
