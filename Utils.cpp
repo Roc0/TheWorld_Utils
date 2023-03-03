@@ -798,7 +798,7 @@ namespace TheWorld_Utils
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Rename error!").c_str()));
 	}
 
-	void MeshCacheBuffer::generateHeightsWithNoise(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, TerrainEdit* terraiEdit, std::vector<float>& vectGridHeights)
+	void MeshCacheBuffer::generateHeightsWithNoise(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, TerrainEdit* terrainEdit, std::vector<float>& vectGridHeights)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateHeights 1 ") + __FUNCTION__, "ALL");
 
@@ -845,34 +845,30 @@ namespace TheWorld_Utils
 		{
 			//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateHeights 1.2 ") + __FUNCTION__, "Generate Heights");
 
-			FastNoiseLite noiseLite(terraiEdit->noise.noiseSeed);
-			noiseLite.SetNoiseType((enum FastNoiseLite::NoiseType)terraiEdit->noise.noiseType);
+			FastNoiseLite noiseLite(terrainEdit->noise.noiseSeed);
+			noiseLite.SetNoiseType((enum FastNoiseLite::NoiseType)terrainEdit->noise.noiseType);
 			//noiseLite.SetRotationType3D();
-			noiseLite.SetFrequency(terraiEdit->noise.frequency);
-			noiseLite.SetFractalType((enum FastNoiseLite::FractalType)terraiEdit->noise.fractalType);
-			noiseLite.SetFractalOctaves(terraiEdit->noise.fractalOctaves);
-			noiseLite.SetFractalLacunarity(terraiEdit->noise.fractalLacunarity);
-			noiseLite.SetFractalGain(terraiEdit->noise.fractalGain);
-			noiseLite.SetFractalWeightedStrength(terraiEdit->noise.fractalWeightedStrength);
-			noiseLite.SetFractalPingPongStrength(terraiEdit->noise.fractalPingPongStrength);
+			noiseLite.SetFrequency(terrainEdit->noise.frequency);
+			noiseLite.SetFractalType((enum FastNoiseLite::FractalType)terrainEdit->noise.fractalType);
+			noiseLite.SetFractalOctaves(terrainEdit->noise.fractalOctaves);
+			noiseLite.SetFractalLacunarity(terrainEdit->noise.fractalLacunarity);
+			noiseLite.SetFractalGain(terrainEdit->noise.fractalGain);
+			noiseLite.SetFractalWeightedStrength(terrainEdit->noise.fractalWeightedStrength);
+			noiseLite.SetFractalPingPongStrength(terrainEdit->noise.fractalPingPongStrength);
 			//noiseLite.SetCellularDistanceFunction();
 			//noiseLite.SetCellularReturnType();
 			//noiseLite.SetCellularJitter()
 
-			terraiEdit->minHeight = FLT_MAX;
-			terraiEdit->maxHeight = FLT_MIN;
-
-			terraiEdit->eastSideXPlus.minHeight = FLT_MAX;
-			terraiEdit->eastSideXPlus.maxHeight = FLT_MIN;
-
-			terraiEdit->westSideXMinus.minHeight = FLT_MAX;
-			terraiEdit->westSideXMinus.maxHeight = FLT_MIN;
-
-			terraiEdit->southSideZPlus.minHeight = FLT_MAX;
-			terraiEdit->southSideZPlus.maxHeight = FLT_MIN;
-
-			terraiEdit->northSideZMinus.minHeight = FLT_MAX;
-			terraiEdit->northSideZMinus.maxHeight = FLT_MIN;
+			terrainEdit->minHeight = FLT_MAX;
+			terrainEdit->maxHeight = FLT_MIN;
+			terrainEdit->eastSideXPlus.minHeight = FLT_MAX;
+			terrainEdit->eastSideXPlus.maxHeight = FLT_MIN;
+			terrainEdit->westSideXMinus.minHeight = FLT_MAX;
+			terrainEdit->westSideXMinus.maxHeight = FLT_MIN;
+			terrainEdit->southSideZPlus.minHeight = FLT_MAX;
+			terrainEdit->southSideZPlus.maxHeight = FLT_MIN;
+			terrainEdit->northSideZMinus.minHeight = FLT_MAX;
+			terrainEdit->northSideZMinus.maxHeight = FLT_MIN;
 
 			size_t idx = 0;
 			for (int z = 0; z < numVerticesPerSize; z++)
@@ -883,47 +879,47 @@ namespace TheWorld_Utils
 					{
 						//TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.2.2 ") + __FUNCTION__, "GetNoise main");
 
-						float xf = (lowerXGridVertex + (x * gridStepInWU)) * terraiEdit->noise.scaleFactor;
-						float zf = (lowerZGridVertex + (z * gridStepInWU)) * terraiEdit->noise.scaleFactor;
+						float xf = (lowerXGridVertex + (x * gridStepInWU)) * terrainEdit->noise.scaleFactor;
+						float zf = (lowerZGridVertex + (z * gridStepInWU)) * terrainEdit->noise.scaleFactor;
 						altitude = noiseLite.GetNoise(xf, zf);
 						// noises are value in range -1 to 1 we need to interpolate with amplitude
-						altitude *= (terraiEdit->noise.amplitude / 2);
+						altitude *= (terrainEdit->noise.amplitude / 2);
 
-						if (altitude < terraiEdit->minHeight)
-							terraiEdit->minHeight = altitude;
-						if (altitude > terraiEdit->maxHeight)
-							terraiEdit->maxHeight = altitude;
+						if (altitude < terrainEdit->minHeight)
+							terrainEdit->minHeight = altitude;
+						if (altitude > terrainEdit->maxHeight)
+							terrainEdit->maxHeight = altitude;
 
 						if (x == 0)
 						{
-							if (altitude < terraiEdit->westSideXMinus.minHeight)
-								terraiEdit->westSideXMinus.minHeight = altitude;
-							if (altitude > terraiEdit->westSideXMinus.maxHeight)
-								terraiEdit->westSideXMinus.maxHeight = altitude;
+							if (altitude < terrainEdit->westSideXMinus.minHeight)
+								terrainEdit->westSideXMinus.minHeight = altitude;
+							if (altitude > terrainEdit->westSideXMinus.maxHeight)
+								terrainEdit->westSideXMinus.maxHeight = altitude;
 						}
 
 						if (z == 0)
 						{
-							if (altitude < terraiEdit->northSideZMinus.minHeight)
-								terraiEdit->northSideZMinus.minHeight = altitude;
-							if (altitude > terraiEdit->northSideZMinus.maxHeight)
-								terraiEdit->northSideZMinus.maxHeight = altitude;
+							if (altitude < terrainEdit->northSideZMinus.minHeight)
+								terrainEdit->northSideZMinus.minHeight = altitude;
+							if (altitude > terrainEdit->northSideZMinus.maxHeight)
+								terrainEdit->northSideZMinus.maxHeight = altitude;
 						}
 
 						if (x == numVerticesPerSize - 1)
 						{
-							if (altitude < terraiEdit->eastSideXPlus.minHeight)
-								terraiEdit->eastSideXPlus.minHeight = altitude;
-							if (altitude > terraiEdit->eastSideXPlus.maxHeight)
-								terraiEdit->eastSideXPlus.maxHeight = altitude;
+							if (altitude < terrainEdit->eastSideXPlus.minHeight)
+								terrainEdit->eastSideXPlus.minHeight = altitude;
+							if (altitude > terrainEdit->eastSideXPlus.maxHeight)
+								terrainEdit->eastSideXPlus.maxHeight = altitude;
 						}
 
 						if (z == numVerticesPerSize - 1)
 						{
-							if (altitude < terraiEdit->southSideZPlus.minHeight)
-								terraiEdit->southSideZPlus.minHeight = altitude;
-							if (altitude > terraiEdit->southSideZPlus.maxHeight)
-								terraiEdit->southSideZPlus.maxHeight = altitude;
+							if (altitude < terrainEdit->southSideZPlus.minHeight)
+								terrainEdit->southSideZPlus.minHeight = altitude;
+							if (altitude > terrainEdit->southSideZPlus.maxHeight)
+								terrainEdit->southSideZPlus.maxHeight = altitude;
 						}
 					}
 
@@ -936,9 +932,9 @@ namespace TheWorld_Utils
 		{
 			//TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.3 ") + __FUNCTION__, "Adjust desidered min height");
 
-			if (terraiEdit->noise.desideredMinHeight != FLT_MIN)
+			if (terrainEdit->noise.desideredMinHeight != FLT_MIN)
 			{
-				float corrector = terraiEdit->noise.desideredMinHeight - terraiEdit->minHeight;
+				float corrector = terrainEdit->noise.desideredMinHeight - terrainEdit->minHeight;
 				size_t idx = 0;
 				for (int z = 0; z < numVerticesPerSize; z++)
 					for (int x = 0; x < numVerticesPerSize; x++)
@@ -947,25 +943,25 @@ namespace TheWorld_Utils
 						idx++;
 					}
 
-				terraiEdit->minHeight += corrector;
-				terraiEdit->maxHeight += corrector;
+				terrainEdit->minHeight += corrector;
+				terrainEdit->maxHeight += corrector;
 
-				terraiEdit->eastSideXPlus.minHeight += corrector;
-				terraiEdit->eastSideXPlus.maxHeight += corrector;
+				terrainEdit->eastSideXPlus.minHeight += corrector;
+				terrainEdit->eastSideXPlus.maxHeight += corrector;
 
-				terraiEdit->westSideXMinus.minHeight += corrector;
-				terraiEdit->westSideXMinus.maxHeight += corrector;
+				terrainEdit->westSideXMinus.minHeight += corrector;
+				terrainEdit->westSideXMinus.maxHeight += corrector;
 
-				terraiEdit->southSideZPlus.minHeight += corrector;
-				terraiEdit->southSideZPlus.maxHeight += corrector;
+				terrainEdit->southSideZPlus.minHeight += corrector;
+				terrainEdit->southSideZPlus.maxHeight += corrector;
 
-				terraiEdit->northSideZMinus.minHeight += corrector;
-				terraiEdit->northSideZMinus.maxHeight += corrector;
+				terrainEdit->northSideZMinus.minHeight += corrector;
+				terrainEdit->northSideZMinus.maxHeight += corrector;
 			}
 		}
 	}
 		
-	void MeshCacheBuffer::applyWorldModifier(int level, size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, TerrainEdit* terraiEdit, std::vector<float>& vectGridHeights, WorldModifier& wm)
+	void MeshCacheBuffer::applyWorldModifier(int level, size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, TerrainEdit* terrainEdit, std::vector<float>& vectGridHeights, WorldModifier& wm)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer applyWorldModifier 1 ") + __FUNCTION__, "ALL");
 
@@ -999,17 +995,17 @@ namespace TheWorld_Utils
 				return;
 		}
 
-		terraiEdit->eastSideXPlus.minHeight = FLT_MAX;
-		terraiEdit->eastSideXPlus.maxHeight = FLT_MIN;
+		terrainEdit->eastSideXPlus.minHeight = FLT_MAX;
+		terrainEdit->eastSideXPlus.maxHeight = FLT_MIN;
 
-		terraiEdit->westSideXMinus.minHeight = FLT_MAX;
-		terraiEdit->westSideXMinus.maxHeight = FLT_MIN;
+		terrainEdit->westSideXMinus.minHeight = FLT_MAX;
+		terrainEdit->westSideXMinus.maxHeight = FLT_MIN;
 
-		terraiEdit->southSideZPlus.minHeight = FLT_MAX;
-		terraiEdit->southSideZPlus.maxHeight = FLT_MIN;
+		terrainEdit->southSideZPlus.minHeight = FLT_MAX;
+		terrainEdit->southSideZPlus.maxHeight = FLT_MIN;
 
-		terraiEdit->northSideZMinus.minHeight = FLT_MAX;
-		terraiEdit->northSideZMinus.maxHeight = FLT_MIN;
+		terrainEdit->northSideZMinus.minHeight = FLT_MAX;
+		terrainEdit->northSideZMinus.maxHeight = FLT_MIN;
 
 		size_t idx = -1;
 		for (int z = 0; z < numVerticesPerSize; z++)
@@ -1036,46 +1032,46 @@ namespace TheWorld_Utils
 				{
 					if (idx == 0)
 					{
-						terraiEdit->minHeight = terraiEdit->maxHeight = vectGridHeights[idx];
+						terrainEdit->minHeight = terrainEdit->maxHeight = vectGridHeights[idx];
 					}
 					else
 					{
-						if (vectGridHeights[idx] < terraiEdit->minHeight)
-							terraiEdit->minHeight = vectGridHeights[idx];
-						if (vectGridHeights[idx] > terraiEdit->maxHeight)
-							terraiEdit->maxHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] < terrainEdit->minHeight)
+							terrainEdit->minHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] > terrainEdit->maxHeight)
+							terrainEdit->maxHeight = vectGridHeights[idx];
 					}
 					
 					if (x == 0)
 					{
-						if (vectGridHeights[idx] < terraiEdit->westSideXMinus.minHeight)
-							terraiEdit->westSideXMinus.minHeight = vectGridHeights[idx];
-						if (vectGridHeights[idx] > terraiEdit->westSideXMinus.maxHeight)
-							terraiEdit->westSideXMinus.maxHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] < terrainEdit->westSideXMinus.minHeight)
+							terrainEdit->westSideXMinus.minHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] > terrainEdit->westSideXMinus.maxHeight)
+							terrainEdit->westSideXMinus.maxHeight = vectGridHeights[idx];
 					}
 
 					if (z == 0)
 					{
-						if (vectGridHeights[idx] < terraiEdit->northSideZMinus.minHeight)
-							terraiEdit->northSideZMinus.minHeight = vectGridHeights[idx];
-						if (vectGridHeights[idx] > terraiEdit->northSideZMinus.maxHeight)
-							terraiEdit->northSideZMinus.maxHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] < terrainEdit->northSideZMinus.minHeight)
+							terrainEdit->northSideZMinus.minHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] > terrainEdit->northSideZMinus.maxHeight)
+							terrainEdit->northSideZMinus.maxHeight = vectGridHeights[idx];
 					}
 
 					if (x == numVerticesPerSize - 1)
 					{
-						if (vectGridHeights[idx] < terraiEdit->eastSideXPlus.minHeight)
-							terraiEdit->eastSideXPlus.minHeight = vectGridHeights[idx];
-						if (vectGridHeights[idx] > terraiEdit->eastSideXPlus.maxHeight)
-							terraiEdit->eastSideXPlus.maxHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] < terrainEdit->eastSideXPlus.minHeight)
+							terrainEdit->eastSideXPlus.minHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] > terrainEdit->eastSideXPlus.maxHeight)
+							terrainEdit->eastSideXPlus.maxHeight = vectGridHeights[idx];
 					}
 
 					if (z == numVerticesPerSize - 1)
 					{
-						if (vectGridHeights[idx] < terraiEdit->southSideZPlus.minHeight)
-							terraiEdit->southSideZPlus.minHeight = vectGridHeights[idx];
-						if (vectGridHeights[idx] > terraiEdit->southSideZPlus.maxHeight)
-							terraiEdit->southSideZPlus.maxHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] < terrainEdit->southSideZPlus.minHeight)
+							terrainEdit->southSideZPlus.minHeight = vectGridHeights[idx];
+						if (vectGridHeights[idx] > terrainEdit->southSideZPlus.maxHeight)
+							terrainEdit->southSideZPlus.maxHeight = vectGridHeights[idx];
 					}
 
 					continue;
@@ -1145,46 +1141,46 @@ namespace TheWorld_Utils
 
 				if (idx == 0)
 				{
-					terraiEdit->minHeight = terraiEdit->maxHeight = vectGridHeights[idx];
+					terrainEdit->minHeight = terrainEdit->maxHeight = vectGridHeights[idx];
 				}
 				else
 				{
-					if (vectGridHeights[idx] < terraiEdit->minHeight)
-						terraiEdit->minHeight = vectGridHeights[idx];
-					if (vectGridHeights[idx] > terraiEdit->maxHeight)
-						terraiEdit->maxHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] < terrainEdit->minHeight)
+						terrainEdit->minHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] > terrainEdit->maxHeight)
+						terrainEdit->maxHeight = vectGridHeights[idx];
 				}
 
 				if (x == 0)
 				{
-					if (vectGridHeights[idx] < terraiEdit->westSideXMinus.minHeight)
-						terraiEdit->westSideXMinus.minHeight = vectGridHeights[idx];
-					if (vectGridHeights[idx] > terraiEdit->westSideXMinus.maxHeight)
-						terraiEdit->westSideXMinus.maxHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] < terrainEdit->westSideXMinus.minHeight)
+						terrainEdit->westSideXMinus.minHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] > terrainEdit->westSideXMinus.maxHeight)
+						terrainEdit->westSideXMinus.maxHeight = vectGridHeights[idx];
 				}
 
 				if (z == 0)
 				{
-					if (vectGridHeights[idx] < terraiEdit->northSideZMinus.minHeight)
-						terraiEdit->northSideZMinus.minHeight = vectGridHeights[idx];
-					if (vectGridHeights[idx] > terraiEdit->northSideZMinus.maxHeight)
-						terraiEdit->northSideZMinus.maxHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] < terrainEdit->northSideZMinus.minHeight)
+						terrainEdit->northSideZMinus.minHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] > terrainEdit->northSideZMinus.maxHeight)
+						terrainEdit->northSideZMinus.maxHeight = vectGridHeights[idx];
 				}
 
 				if (x == numVerticesPerSize - 1)
 				{
-					if (vectGridHeights[idx] < terraiEdit->eastSideXPlus.minHeight)
-						terraiEdit->eastSideXPlus.minHeight = vectGridHeights[idx];
-					if (vectGridHeights[idx] > terraiEdit->eastSideXPlus.maxHeight)
-						terraiEdit->eastSideXPlus.maxHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] < terrainEdit->eastSideXPlus.minHeight)
+						terrainEdit->eastSideXPlus.minHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] > terrainEdit->eastSideXPlus.maxHeight)
+						terrainEdit->eastSideXPlus.maxHeight = vectGridHeights[idx];
 				}
 
 				if (z == numVerticesPerSize - 1)
 				{
-					if (vectGridHeights[idx] < terraiEdit->southSideZPlus.minHeight)
-						terraiEdit->southSideZPlus.minHeight = vectGridHeights[idx];
-					if (vectGridHeights[idx] > terraiEdit->southSideZPlus.maxHeight)
-						terraiEdit->southSideZPlus.maxHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] < terrainEdit->southSideZPlus.minHeight)
+						terrainEdit->southSideZPlus.minHeight = vectGridHeights[idx];
+					if (vectGridHeights[idx] > terrainEdit->southSideZPlus.maxHeight)
+						terrainEdit->southSideZPlus.maxHeight = vectGridHeights[idx];
 				}
 			}
 	}
@@ -1743,7 +1739,7 @@ namespace TheWorld_Utils
 		CacheQuadrantData& eastData,
 		CacheQuadrantData& northwestData,
 		CacheQuadrantData& northeastData,
-		CacheQuadrantData& southwesthData,
+		CacheQuadrantData& southwestData,
 		CacheQuadrantData& southeastData)
 	{
 		bool updated = false;
@@ -1752,162 +1748,158 @@ namespace TheWorld_Utils
 		if (!terrainEdit->northSideZMinus.needBlend && !terrainEdit->southSideZPlus.needBlend && !terrainEdit->eastSideXPlus.needBlend && !terrainEdit->westSideXMinus.needBlend)
 			return updated;
 		
-		if(blendQuadrantOnNorthSide(numVerticesPerSize, gridStepInWU, lastPhase, data, northData, southData, westData, eastData, northwestData, northeastData, southwesthData, southeastData))
+		if (blendQuadrantOnNorthSide(numVerticesPerSize, gridStepInWU, lastPhase, data, northData, southData, westData, eastData, northwestData, northeastData, southwestData, southeastData))
 			updated = true;
 
-		if (blendQuadrantOnSouthSide(numVerticesPerSize, gridStepInWU, lastPhase, data, northData, southData, westData, eastData, northwestData, northeastData, southwesthData, southeastData))
+		if (blendQuadrantOnSouthSide(numVerticesPerSize, gridStepInWU, lastPhase, data, northData, southData, westData, eastData, northwestData, northeastData, southwestData, southeastData))
 			updated = true;
 
-		if (blendQuadrantOnWestSide(numVerticesPerSize, gridStepInWU, lastPhase, data, northData, southData, westData, eastData, northwestData, northeastData, southwesthData, southeastData))
+		if (blendQuadrantOnWestSide(numVerticesPerSize, gridStepInWU, lastPhase, data, northData, southData, westData, eastData, northwestData, northeastData, southwestData, southeastData))
 			updated = true;
 
-		if (blendQuadrantOnEastSide(numVerticesPerSize, gridStepInWU, lastPhase, data, northData, southData, westData, eastData, northwestData, northeastData, southwesthData, southeastData))
+		if (blendQuadrantOnEastSide(numVerticesPerSize, gridStepInWU, lastPhase, data, northData, southData, westData, eastData, northwestData, northeastData, southwestData, southeastData))
+			updated = true;
+
+		CacheQuadrantData emptyData;
+
+		if (blendQuadrantOnWestSide(numVerticesPerSize, gridStepInWU, lastPhase, northData, 
+			emptyData /*N*/, data /*S*/, northwestData /*W*/, northeastData /*E*/, emptyData /*NW*/, emptyData /*NE*/, westData /*SW*/, eastData /*SE*/))
+			updated = true;
+		if (blendQuadrantOnEastSide(numVerticesPerSize, gridStepInWU, lastPhase, northData,
+			emptyData /*N*/, data /*S*/, northwestData /*W*/, northeastData /*E*/, emptyData /*NW*/, emptyData /*NE*/, westData /*SW*/, eastData /*SE*/))
+			updated = true;
+
+		if (blendQuadrantOnWestSide(numVerticesPerSize, gridStepInWU, lastPhase, southData,
+			data /*N*/, emptyData /*S*/, southwestData /*W*/, southeastData /*E*/, westData /*NW*/, eastData /*NE*/, emptyData /*SW*/, emptyData /*SE*/))
+			updated = true;
+		if (blendQuadrantOnEastSide(numVerticesPerSize, gridStepInWU, lastPhase, southData,
+			data /*N*/, emptyData /*S*/, southwestData /*W*/, southeastData /*E*/, westData /*NW*/, eastData /*NE*/, emptyData /*SW*/, emptyData /*SE*/))
+			updated = true;
+
+		if (blendQuadrantOnNorthSide(numVerticesPerSize, gridStepInWU, lastPhase, westData,
+			northwestData /*N*/, southwestData /*S*/, emptyData /*W*/, data /*E*/, emptyData /*NW*/, northData /*NE*/, emptyData /*SW*/, southData /*SE*/))
+			updated = true;
+		if (blendQuadrantOnSouthSide(numVerticesPerSize, gridStepInWU, lastPhase, westData,
+			northwestData /*N*/, southwestData /*S*/, emptyData /*W*/, data /*E*/, emptyData /*NW*/, northData /*NE*/, emptyData /*SW*/, southData /*SE*/))
+			updated = true;
+
+		if (blendQuadrantOnNorthSide(numVerticesPerSize, gridStepInWU, lastPhase, eastData,
+			northeastData /*N*/, southeastData /*S*/, data /*W*/, emptyData /*E*/, northData /*NW*/, emptyData /*NE*/, southData /*SW*/, emptyData /*SE*/))
+			updated = true;
+		if (blendQuadrantOnSouthSide(numVerticesPerSize, gridStepInWU, lastPhase, eastData,
+			northeastData /*N*/, southeastData /*S*/, data /*W*/, emptyData /*E*/, northData /*NW*/, emptyData /*NE*/, southData /*SW*/, emptyData /*SE*/))
 			updated = true;
 
 		if (data.heightsUpdated)
 		{
-			terrainEdit->minHeight = FLT_MAX;
-			terrainEdit->maxHeight = FLT_MIN;
-			for (size_t z = 0; z < numVerticesPerSize; z++)
-				for (size_t x = 0; x < numVerticesPerSize; x++)
-				{
-					float h = data.heights32Buffer->at<float>(x, z, numVerticesPerSize);
-					if (h < terrainEdit->minHeight)
-						terrainEdit->minHeight = h;
-					if (h > terrainEdit->maxHeight)
-						terrainEdit->maxHeight = h;
-				}
+			calcMinMxHeight(numVerticesPerSize, terrainEdit, *data.heights32Buffer);
 		}
 
-		if (northData.heightsUpdated)
+		if (northData.heightsUpdated && northData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* northTerrainEdit = (TerrainEdit*)northData.terrainEditValues->ptr();
-			northTerrainEdit->minHeight = FLT_MAX;
-			northTerrainEdit->maxHeight = FLT_MIN;
-			for (size_t z = 0; z < numVerticesPerSize; z++)
-				for (size_t x = 0; x < numVerticesPerSize; x++)
-				{
-					float h = northData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
-					if (h < northTerrainEdit->minHeight)
-						northTerrainEdit->minHeight = h;
-					if (h > northTerrainEdit->maxHeight)
-						northTerrainEdit->maxHeight = h;
-				}
+			calcMinMxHeight(numVerticesPerSize, northTerrainEdit, *northData.heights32Buffer);
 		}
 
-		if (southData.heightsUpdated)
+		if (southData.heightsUpdated && southData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* southTerrainEdit = (TerrainEdit*)southData.terrainEditValues->ptr();
-			southTerrainEdit->minHeight = FLT_MAX;
-			southTerrainEdit->maxHeight = FLT_MIN;
-			for (size_t z = 0; z < numVerticesPerSize; z++)
-				for (size_t x = 0; x < numVerticesPerSize; x++)
-				{
-					float h = southData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
-					if (h < southTerrainEdit->minHeight)
-						southTerrainEdit->minHeight = h;
-					if (h > southTerrainEdit->maxHeight)
-						southTerrainEdit->maxHeight = h;
-				}
+			calcMinMxHeight(numVerticesPerSize, southTerrainEdit, *southData.heights32Buffer);
 		}
 
-		if (westData.heightsUpdated)
+		if (westData.heightsUpdated && westData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* westTerrainEdit = (TerrainEdit*)westData.terrainEditValues->ptr();
-			westTerrainEdit->minHeight = FLT_MAX;
-			westTerrainEdit->maxHeight = FLT_MIN;
-			for (size_t z = 0; z < numVerticesPerSize; z++)
-				for (size_t x = 0; x < numVerticesPerSize; x++)
-				{
-					float h = westData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
-					if (h < westTerrainEdit->minHeight)
-						westTerrainEdit->minHeight = h;
-					if (h > westTerrainEdit->maxHeight)
-						westTerrainEdit->maxHeight = h;
-				}
+			calcMinMxHeight(numVerticesPerSize, westTerrainEdit, *westData.heights32Buffer);
 		}
 
-		if (eastData.heightsUpdated)
+		if (eastData.heightsUpdated && eastData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* eastTerrainEdit = (TerrainEdit*)eastData.terrainEditValues->ptr();
-			eastTerrainEdit->minHeight = FLT_MAX;
-			eastTerrainEdit->maxHeight = FLT_MIN;
-			for (size_t z = 0; z < numVerticesPerSize; z++)
-				for (size_t x = 0; x < numVerticesPerSize; x++)
-				{
-					float h = eastData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
-					if (h < eastTerrainEdit->minHeight)
-						eastTerrainEdit->minHeight = h;
-					if (h > eastTerrainEdit->maxHeight)
-						eastTerrainEdit->maxHeight = h;
-				}
+			calcMinMxHeight(numVerticesPerSize, eastTerrainEdit, *eastData.heights32Buffer);
 		}
 
-		if (northwestData.heightsUpdated)
+		if (northwestData.heightsUpdated && northwestData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* northwestTerrainEdit = (TerrainEdit*)northwestData.terrainEditValues->ptr();
-			northwestTerrainEdit->minHeight = FLT_MAX;
-			northwestTerrainEdit->maxHeight = FLT_MIN;
-			for (size_t z = 0; z < numVerticesPerSize; z++)
-				for (size_t x = 0; x < numVerticesPerSize; x++)
-				{
-					float h = northwestData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
-					if (h < northwestTerrainEdit->minHeight)
-						northwestTerrainEdit->minHeight = h;
-					if (h > northwestTerrainEdit->maxHeight)
-						northwestTerrainEdit->maxHeight = h;
-				}
+			calcMinMxHeight(numVerticesPerSize, northwestTerrainEdit, *northwestData.heights32Buffer);
 		}
 
-		if (northeastData.heightsUpdated)
+		if (northeastData.heightsUpdated && northeastData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* northeastTerrainEdit = (TerrainEdit*)northeastData.terrainEditValues->ptr();
-			northeastTerrainEdit->minHeight = FLT_MAX;
-			northeastTerrainEdit->maxHeight = FLT_MIN;
-			for (size_t z = 0; z < numVerticesPerSize; z++)
-				for (size_t x = 0; x < numVerticesPerSize; x++)
-				{
-					float h = northeastData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
-					if (h < northeastTerrainEdit->minHeight)
-						northeastTerrainEdit->minHeight = h;
-					if (h > northeastTerrainEdit->maxHeight)
-						northeastTerrainEdit->maxHeight = h;
-				}
+			calcMinMxHeight(numVerticesPerSize, northeastTerrainEdit, *northeastData.heights32Buffer);
 		}
 
-		if (southwesthData.heightsUpdated)
+		if (southwestData.heightsUpdated && southwestData.terrainEditValues != nullptr)
 		{
-			TerrainEdit* southwesthTerrainEdit = (TerrainEdit*)southwesthData.terrainEditValues->ptr();
-			southwesthTerrainEdit->minHeight = FLT_MAX;
-			southwesthTerrainEdit->maxHeight = FLT_MIN;
-			for (size_t z = 0; z < numVerticesPerSize; z++)
-				for (size_t x = 0; x < numVerticesPerSize; x++)
-				{
-					float h = southwesthData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
-					if (h < southwesthTerrainEdit->minHeight)
-						southwesthTerrainEdit->minHeight = h;
-					if (h > southwesthTerrainEdit->maxHeight)
-						southwesthTerrainEdit->maxHeight = h;
-				}
+			TerrainEdit* southwesthTerrainEdit = (TerrainEdit*)southwestData.terrainEditValues->ptr();
+			calcMinMxHeight(numVerticesPerSize, southwesthTerrainEdit, *southwestData.heights32Buffer);
 		}
 
-		if (southeastData.heightsUpdated)
+		if (southeastData.heightsUpdated && southeastData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
-			southeastTerrainEdit->minHeight = FLT_MAX;
-			southeastTerrainEdit->maxHeight = FLT_MIN;
-			for (size_t z = 0; z < numVerticesPerSize; z++)
-				for (size_t x = 0; x < numVerticesPerSize; x++)
-				{
-					float h = southeastData.heights32Buffer->at<float>(x, z, numVerticesPerSize);
-					if (h < southeastTerrainEdit->minHeight)
-						southeastTerrainEdit->minHeight = h;
-					if (h > southeastTerrainEdit->maxHeight)
-						southeastTerrainEdit->maxHeight = h;
-				}
+			calcMinMxHeight(numVerticesPerSize, southeastTerrainEdit, *southeastData.heights32Buffer);
 		}
 
 		return updated;
+	}
+
+	void MeshCacheBuffer::calcMinMxHeight(size_t numVerticesPerSize, TheWorld_Utils::TerrainEdit* terrainEdit, TheWorld_Utils::MemoryBuffer& heights32Buffer)
+	{
+		terrainEdit->minHeight = FLT_MAX;
+		terrainEdit->maxHeight = FLT_MIN;
+		terrainEdit->eastSideXPlus.minHeight = FLT_MAX;
+		terrainEdit->eastSideXPlus.maxHeight = FLT_MIN;
+		terrainEdit->westSideXMinus.minHeight = FLT_MAX;
+		terrainEdit->westSideXMinus.maxHeight = FLT_MIN;
+		terrainEdit->southSideZPlus.minHeight = FLT_MAX;
+		terrainEdit->southSideZPlus.maxHeight = FLT_MIN;
+		terrainEdit->northSideZMinus.minHeight = FLT_MAX;
+		terrainEdit->northSideZMinus.maxHeight = FLT_MIN;
+
+		for (size_t z = 0; z < numVerticesPerSize; z++)
+			for (size_t x = 0; x < numVerticesPerSize; x++)
+			{
+				float h = heights32Buffer.at<float>(x, z, numVerticesPerSize);
+				if (h < terrainEdit->minHeight)
+					terrainEdit->minHeight = h;
+				if (h > terrainEdit->maxHeight)
+					terrainEdit->maxHeight = h;
+
+				if (x == 0)
+				{
+					if (h < terrainEdit->westSideXMinus.minHeight)
+						terrainEdit->westSideXMinus.minHeight = h;
+					if (h > terrainEdit->westSideXMinus.maxHeight)
+						terrainEdit->westSideXMinus.maxHeight = h;
+				}
+
+				if (z == 0)
+				{
+					if (h < terrainEdit->northSideZMinus.minHeight)
+						terrainEdit->northSideZMinus.minHeight = h;
+					if (h > terrainEdit->northSideZMinus.maxHeight)
+						terrainEdit->northSideZMinus.maxHeight = h;
+				}
+
+				if (x == numVerticesPerSize - 1)
+				{
+					if (h < terrainEdit->eastSideXPlus.minHeight)
+						terrainEdit->eastSideXPlus.minHeight = h;
+					if (h > terrainEdit->eastSideXPlus.maxHeight)
+						terrainEdit->eastSideXPlus.maxHeight = h;
+				}
+
+				if (z == numVerticesPerSize - 1)
+				{
+					if (h < terrainEdit->southSideZPlus.minHeight)
+						terrainEdit->southSideZPlus.minHeight = h;
+					if (h > terrainEdit->southSideZPlus.maxHeight)
+						terrainEdit->southSideZPlus.maxHeight = h;
+				}
+			}
 	}
 
 	bool MeshCacheBuffer::blendQuadrantOnNorthSide(size_t numVerticesPerSize, float gridStepInWU, bool lastPhase,
@@ -1949,7 +1941,7 @@ namespace TheWorld_Utils
 
 		bool updated = false;
 		
-		if (terrainEdit->northSideZMinus.needBlend && northData.heights32Buffer != nullptr)
+		if (northData.heights32Buffer != nullptr && northTerrainEdit != nullptr && (terrainEdit->northSideZMinus.needBlend || northTerrainEdit->southSideZPlus.needBlend))
 		{
 			// moving on north side: every x with z = 0 
 			for (size_t x = 0; x < numVerticesPerSize; x++)
@@ -1964,9 +1956,6 @@ namespace TheWorld_Utils
 					float increment = 0.0f;
 					float averageStep = (abs(data.heights32Buffer->at<float>(x, numVerticesToAdjustInEachQuadrant - 1, numVerticesPerSize)
 								- northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - (numVerticesToAdjustInEachQuadrant - 1), numVerticesPerSize)) / 2) / numVerticesToAdjustInEachQuadrant;
-					//if (data.heights32Buffer->at<float>(x, 0, numVerticesPerSize) > northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize))
-					//	averageStep = -averageStep;
-					//increment = step;
 
 					data.heightsUpdated = true;
 					northData.heightsUpdated = true;
@@ -1985,20 +1974,20 @@ namespace TheWorld_Utils
 						else
 							increment = 0.0f;
 
-						float h = data.heights32Buffer->at<float>(x, z, numVerticesPerSize);
+						//float h = data.heights32Buffer->at<float>(x, z, numVerticesPerSize);
 						data.heights32Buffer->at<float>(x, z, numVerticesPerSize) += increment;
 						TheWorld_Utils::FLOAT_32 f(data.heights32Buffer->at<float>(x, z, numVerticesPerSize));
 						uint16_t half = half_from_float(f.u32);
 						data.heights16Buffer->at<uint16_t>(x, z, numVerticesPerSize) = half;
 
-						float hNorth = northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize);
+						//float hNorth = northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize);
 						northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize) -= increment;
 						TheWorld_Utils::FLOAT_32 f1(northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize));
 						uint16_t half1 = half_from_float(f1.u32);
 						northData.heights16Buffer->at<uint16_t>(x, numVerticesPerSize - 1 - z, numVerticesPerSize) = half1;
 
-						if (x == 0)
-							PLOG_DEBUG << "x=" << std::to_string(x) << " z=" << std::to_string(z) << "/" << std::to_string(numVerticesPerSize - 1 - z) << " increment= " << std::to_string(increment) << " " << std::to_string(h) << " ==> " << std::to_string(data.heights32Buffer->at<float>(x, z, numVerticesPerSize)) << " " << std::to_string(hNorth) << " ==> " << std::to_string(northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize));
+						//if (x == 0)
+						//	PLOG_DEBUG << "x=" << std::to_string(x) << " z=" << std::to_string(z) << "/" << std::to_string(numVerticesPerSize - 1 - z) << " increment= " << std::to_string(increment) << " " << std::to_string(h) << " ==> " << std::to_string(data.heights32Buffer->at<float>(x, z, numVerticesPerSize)) << " " << std::to_string(hNorth) << " ==> " << std::to_string(northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize));
 
 						// if last phase we need to reconcile vertices on the border of modified quadrants
 						if (x == 0)
@@ -2014,8 +2003,8 @@ namespace TheWorld_Utils
 								}
 								else
 								{
-									if (westTerrainEdit != nullptr)
-										westTerrainEdit->eastSideXPlus.needBlend = true;
+									terrainEdit->westSideXMinus.needBlend = true;
+									westTerrainEdit->eastSideXPlus.needBlend = true;
 								}
 							}
 							if (northwestData.heights32Buffer != nullptr && northwestTerrainEdit  != nullptr && !northwestTerrainEdit->eastSideXPlus.needBlend && northTerrainEdit!= nullptr && !northTerrainEdit->westSideXMinus.needBlend)
@@ -2029,8 +2018,8 @@ namespace TheWorld_Utils
 								}
 								else
 								{
-									if (northwestTerrainEdit != nullptr)
-										northwestTerrainEdit->eastSideXPlus.needBlend = true;
+									northwestTerrainEdit->eastSideXPlus.needBlend = true;
+									northTerrainEdit->westSideXMinus.needBlend = true;
 								}
 							}
 						}
@@ -2049,8 +2038,8 @@ namespace TheWorld_Utils
 								}
 								else
 								{
-									if (eastTerrainEdit != nullptr)
-										eastTerrainEdit->westSideXMinus.needBlend = true;
+									terrainEdit->eastSideXPlus.needBlend = true;
+									eastTerrainEdit->westSideXMinus.needBlend = true;
 								}
 							}
 							if (northeastData.heights32Buffer != nullptr && northeastTerrainEdit != nullptr && !northeastTerrainEdit->westSideXMinus.needBlend && northTerrainEdit != nullptr && !northTerrainEdit->eastSideXPlus.needBlend)
@@ -2064,8 +2053,8 @@ namespace TheWorld_Utils
 								}
 								else
 								{
-									if (northeastTerrainEdit != nullptr)
-										northeastTerrainEdit->westSideXMinus.needBlend = true;
+									northeastTerrainEdit->westSideXMinus.needBlend = true;
+									northTerrainEdit->eastSideXPlus.needBlend = true;
 								}
 							}
 						}
@@ -2074,6 +2063,7 @@ namespace TheWorld_Utils
 			}
 
 			terrainEdit->northSideZMinus.needBlend = false;
+			northTerrainEdit->southSideZPlus.needBlend = false;
 		}
 
 		return updated;
@@ -2087,10 +2077,157 @@ namespace TheWorld_Utils
 		CacheQuadrantData& eastData,
 		CacheQuadrantData& northwestData,
 		CacheQuadrantData& northeastData,
-		CacheQuadrantData& southwesthData,
+		CacheQuadrantData& southwestData,
 		CacheQuadrantData& southeastData)
 	{
+		TerrainEdit* terrainEdit = (TerrainEdit*)data.terrainEditValues->ptr();
+		//TerrainEdit* northTerrainEdit = nullptr;
+		//if (northData.terrainEditValues != nullptr)
+		//	northTerrainEdit = (TerrainEdit*)northData.terrainEditValues->ptr();
+		TerrainEdit* southTerrainEdit = nullptr;
+		if (southData.terrainEditValues != nullptr)
+			southTerrainEdit = (TerrainEdit*)southData.terrainEditValues->ptr();
+		TerrainEdit* westTerrainEdit = nullptr;
+		if (westData.terrainEditValues != nullptr)
+			westTerrainEdit = (TerrainEdit*)westData.terrainEditValues->ptr();
+		TerrainEdit* eastTerrainEdit = nullptr;
+		if (eastData.terrainEditValues != nullptr)
+			eastTerrainEdit = (TerrainEdit*)eastData.terrainEditValues->ptr();
+		//TerrainEdit* northwestTerrainEdit = nullptr;
+		//if (northwestData.terrainEditValues != nullptr)
+		//	northwestTerrainEdit = (TerrainEdit*)northwestData.terrainEditValues->ptr();
+		//TerrainEdit* northeastTerrainEdit = nullptr;
+		//if (northeastData.terrainEditValues != nullptr)
+		//	northeastTerrainEdit = (TerrainEdit*)northeastData.terrainEditValues->ptr();
+		TerrainEdit* southwestTerrainEdit = nullptr;
+		if (southwestData.terrainEditValues != nullptr)
+			southwestTerrainEdit = (TerrainEdit*)southwestData.terrainEditValues->ptr();
+		TerrainEdit* southeastTerrainEdit = nullptr;
+		if (southeastData.terrainEditValues != nullptr)
+			southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
+
 		bool updated = false;
+
+		if (southData.heights32Buffer != nullptr && southTerrainEdit != nullptr && (terrainEdit->southSideZPlus.needBlend || southTerrainEdit->northSideZMinus.needBlend))
+		{
+			// moving on south side: every x with z = 0 
+			for (size_t x = 0; x < numVerticesPerSize; x++)
+			{
+				float gapForEachQuandrantOnBorder = abs(data.heights32Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize) - southData.heights32Buffer->at<float>(x, 0, numVerticesPerSize)) / 2;
+				size_t numVerticesToAdjustInEachQuadrant = (size_t)ceilf(gapForEachQuandrantOnBorder / (gridStepInWU / 2));
+				if (numVerticesToAdjustInEachQuadrant > numVerticesPerSize / 2)
+					numVerticesToAdjustInEachQuadrant = numVerticesPerSize / 2;
+
+				if (numVerticesToAdjustInEachQuadrant > 0)
+				{
+					float increment = 0.0f;
+					float averageStep = (abs(data.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - (numVerticesToAdjustInEachQuadrant - 1), numVerticesPerSize)
+						- southData.heights32Buffer->at<float>(x, numVerticesToAdjustInEachQuadrant - 1, numVerticesPerSize)) / 2) / numVerticesToAdjustInEachQuadrant;
+
+					data.heightsUpdated = true;
+					southData.heightsUpdated = true;
+					updated = true;
+
+					for (int z = (int)numVerticesToAdjustInEachQuadrant - 1; z >= 0; z--)
+					{
+						float currentGapInEachQuadrant = abs(data.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize) - southData.heights32Buffer->at<float>(x, z, numVerticesPerSize)) / 2;
+						float desideredGapInEachQuadrant = abs(averageStep) * z;
+						if (currentGapInEachQuadrant > desideredGapInEachQuadrant)
+						{
+							increment = currentGapInEachQuadrant - desideredGapInEachQuadrant;
+							if (data.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize) > southData.heights32Buffer->at<float>(x, z, numVerticesPerSize))
+								increment = -increment;
+						}
+						else
+							increment = 0.0f;
+
+						data.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize) += increment;
+						TheWorld_Utils::FLOAT_32 f(data.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize));
+						uint16_t half = half_from_float(f.u32);
+						data.heights16Buffer->at<uint16_t>(x, numVerticesPerSize - 1 - z, numVerticesPerSize) = half;
+
+						southData.heights32Buffer->at<float>(x, z, numVerticesPerSize) -= increment;
+						TheWorld_Utils::FLOAT_32 f1(southData.heights32Buffer->at<float>(x, z, numVerticesPerSize));
+						uint16_t half1 = half_from_float(f1.u32);
+						southData.heights16Buffer->at<uint16_t>(x, z, numVerticesPerSize) = half1;
+
+						// if last phase we need to reconcile vertices on the border of modified quadrants
+						if (x == 0)
+						{
+							if (westData.heights32Buffer != nullptr && westTerrainEdit != nullptr && !westTerrainEdit->eastSideXPlus.needBlend && !terrainEdit->westSideXMinus.needBlend)
+							{
+								if (lastPhase)
+								{
+									westData.heightsUpdated = true;
+									updated = true;
+									westData.heights32Buffer->at<float>(numVerticesPerSize - 1, numVerticesPerSize - 1 - z, numVerticesPerSize) = f.f32;
+									westData.heights16Buffer->at<float>(numVerticesPerSize - 1, numVerticesPerSize - 1 - z, numVerticesPerSize) = half;
+								}
+								else
+								{
+									terrainEdit->westSideXMinus.needBlend = true;
+									westTerrainEdit->eastSideXPlus.needBlend = true;
+								}
+							}
+							if (southwestData.heights32Buffer != nullptr && southwestTerrainEdit != nullptr && !southwestTerrainEdit->eastSideXPlus.needBlend && southTerrainEdit != nullptr && !southTerrainEdit->westSideXMinus.needBlend)
+							{
+								if (lastPhase)
+								{
+									southwestData.heightsUpdated = true;
+									updated = true;
+									southwestData.heights32Buffer->at<float>(numVerticesPerSize - 1, z, numVerticesPerSize) = f1.f32;
+									southwestData.heights16Buffer->at<float>(numVerticesPerSize - 1, z, numVerticesPerSize) = half1;
+								}
+								else
+								{
+									southwestTerrainEdit->eastSideXPlus.needBlend = true;
+									southTerrainEdit->westSideXMinus.needBlend = true;
+								}
+							}
+						}
+
+						// if last phase we need to reconcile vertices on the border of modified quadrants
+						if (x == numVerticesPerSize - 1)
+						{
+							if (eastData.heights32Buffer != nullptr && eastTerrainEdit != nullptr && !eastTerrainEdit->westSideXMinus.needBlend && !terrainEdit->eastSideXPlus.needBlend)
+							{
+								if (lastPhase)
+								{
+									eastData.heightsUpdated = true;
+									updated = true;
+									eastData.heights32Buffer->at<float>(0, numVerticesPerSize - 1 - z, numVerticesPerSize) = f.f32;
+									eastData.heights16Buffer->at<float>(0, numVerticesPerSize - 1 - z, numVerticesPerSize) = half;
+								}
+								else
+								{
+									terrainEdit->eastSideXPlus.needBlend = true;
+									eastTerrainEdit->westSideXMinus.needBlend = true;
+								}
+							}
+							if (southeastData.heights32Buffer != nullptr && southeastTerrainEdit != nullptr && !southeastTerrainEdit->westSideXMinus.needBlend && southTerrainEdit != nullptr && !southTerrainEdit->eastSideXPlus.needBlend)
+							{
+								if (lastPhase)
+								{
+									southeastData.heightsUpdated = true;
+									updated = true;
+									southeastData.heights32Buffer->at<float>(0, z, numVerticesPerSize) = f1.f32;
+									southeastData.heights16Buffer->at<float>(0, z, numVerticesPerSize) = half1;
+								}
+								else
+								{
+									southeastTerrainEdit->westSideXMinus.needBlend = true;
+									southTerrainEdit->eastSideXPlus.needBlend = true;
+								}
+							}
+						}
+					}
+				}
+			}
+
+			terrainEdit->southSideZPlus.needBlend = false;
+			southTerrainEdit->northSideZMinus.needBlend = false;
+		}
+
 		return updated;
 	}
 
@@ -2102,10 +2239,157 @@ namespace TheWorld_Utils
 		CacheQuadrantData& eastData,
 		CacheQuadrantData& northwestData,
 		CacheQuadrantData& northeastData,
-		CacheQuadrantData& southwesthData,
+		CacheQuadrantData& southwestData,
 		CacheQuadrantData& southeastData)
 	{
+		TerrainEdit* terrainEdit = (TerrainEdit*)data.terrainEditValues->ptr();
+		TerrainEdit* northTerrainEdit = nullptr;
+		if (northData.terrainEditValues != nullptr)
+			northTerrainEdit = (TerrainEdit*)northData.terrainEditValues->ptr();
+		TerrainEdit* southTerrainEdit = nullptr;
+		if (southData.terrainEditValues != nullptr)
+			southTerrainEdit = (TerrainEdit*)southData.terrainEditValues->ptr();
+		TerrainEdit* westTerrainEdit = nullptr;
+		if (westData.terrainEditValues != nullptr)
+			westTerrainEdit = (TerrainEdit*)westData.terrainEditValues->ptr();
+		//TerrainEdit* eastTerrainEdit = nullptr;
+		//if (eastData.terrainEditValues != nullptr)
+		//	eastTerrainEdit = (TerrainEdit*)eastData.terrainEditValues->ptr();
+		TerrainEdit* northwestTerrainEdit = nullptr;
+		if (northwestData.terrainEditValues != nullptr)
+			northwestTerrainEdit = (TerrainEdit*)northwestData.terrainEditValues->ptr();
+		//TerrainEdit* northeastTerrainEdit = nullptr;
+		//if (northeastData.terrainEditValues != nullptr)
+		//	northeastTerrainEdit = (TerrainEdit*)northeastData.terrainEditValues->ptr();
+		TerrainEdit* southwestTerrainEdit = nullptr;
+		if (southwestData.terrainEditValues != nullptr)
+			southwestTerrainEdit = (TerrainEdit*)southwestData.terrainEditValues->ptr();
+		//TerrainEdit* southeastTerrainEdit = nullptr;
+		//if (southeastData.terrainEditValues != nullptr)
+		//	southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
+
 		bool updated = false;
+
+		if (westData.heights32Buffer != nullptr && westTerrainEdit != nullptr && (terrainEdit->westSideXMinus.needBlend || westTerrainEdit->eastSideXPlus.needBlend))
+		{
+			// moving on west side: every z with x = 0 
+			for (size_t z = 0; z < numVerticesPerSize; z++)
+			{
+				float gapForEachQuandrantOnBorder = abs(data.heights32Buffer->at<float>(0, z, numVerticesPerSize) - westData.heights32Buffer->at<float>(numVerticesPerSize - 1, z, numVerticesPerSize)) / 2;
+				size_t numVerticesToAdjustInEachQuadrant = (size_t)ceilf(gapForEachQuandrantOnBorder / (gridStepInWU / 2));
+				if (numVerticesToAdjustInEachQuadrant > numVerticesPerSize / 2)
+					numVerticesToAdjustInEachQuadrant = numVerticesPerSize / 2;
+
+				if (numVerticesToAdjustInEachQuadrant > 0)
+				{
+					float increment = 0.0f;
+					float averageStep = (abs(data.heights32Buffer->at<float>(numVerticesToAdjustInEachQuadrant - 1, z, numVerticesPerSize)
+						- westData.heights32Buffer->at<float>(numVerticesPerSize - 1 - (numVerticesToAdjustInEachQuadrant - 1), z, numVerticesPerSize)) / 2) / numVerticesToAdjustInEachQuadrant;
+
+					data.heightsUpdated = true;
+					westData.heightsUpdated = true;
+					updated = true;
+
+					for (int x = (int)numVerticesToAdjustInEachQuadrant - 1; x >= 0; x--)
+					{
+						float currentGapInEachQuadrant = abs(data.heights32Buffer->at<float>(x, z, numVerticesPerSize) - westData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize)) / 2;
+						float desideredGapInEachQuadrant = abs(averageStep) * x;
+						if (currentGapInEachQuadrant > desideredGapInEachQuadrant)
+						{
+							increment = currentGapInEachQuadrant - desideredGapInEachQuadrant;
+							if (data.heights32Buffer->at<float>(x, z, numVerticesPerSize) > westData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize))
+								increment = -increment;
+						}
+						else
+							increment = 0.0f;
+
+						data.heights32Buffer->at<float>(x, z, numVerticesPerSize) += increment;
+						TheWorld_Utils::FLOAT_32 f(data.heights32Buffer->at<float>(x, z, numVerticesPerSize));
+						uint16_t half = half_from_float(f.u32);
+						data.heights16Buffer->at<uint16_t>(x, z, numVerticesPerSize) = half;
+
+						westData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize) -= increment;
+						TheWorld_Utils::FLOAT_32 f1(westData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize));
+						uint16_t half1 = half_from_float(f1.u32);
+						westData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1 - x, z, numVerticesPerSize) = half1;
+
+						// if last phase we need to reconcile vertices on the border of modified quadrants
+						if (z == 0)
+						{
+							if (northData.heights32Buffer != nullptr && northTerrainEdit != nullptr && !northTerrainEdit->southSideZPlus.needBlend && !terrainEdit->northSideZMinus.needBlend)
+							{
+								if (lastPhase)
+								{
+									northData.heightsUpdated = true;
+									updated = true;
+									northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize) = f.f32;
+									northData.heights16Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize) = half;
+								}
+								else
+								{
+									terrainEdit->northSideZMinus.needBlend = true;
+									northTerrainEdit->southSideZPlus.needBlend = true;
+								}
+							}
+							if (northwestData.heights32Buffer != nullptr && northwestTerrainEdit != nullptr && !northwestTerrainEdit->southSideZPlus.needBlend && westTerrainEdit != nullptr && !westTerrainEdit->northSideZMinus.needBlend)
+							{
+								if (lastPhase)
+								{
+									northwestData.heightsUpdated = true;
+									updated = true;
+									northwestData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, numVerticesPerSize - 1, numVerticesPerSize) = f1.f32;
+									northwestData.heights16Buffer->at<float>(numVerticesPerSize - 1 - x, numVerticesPerSize - 1, numVerticesPerSize) = half1;
+								}
+								else
+								{
+									northwestTerrainEdit->southSideZPlus.needBlend = true;
+									westTerrainEdit->northSideZMinus.needBlend = true;
+								}
+							}
+						}
+
+						// if last phase we need to reconcile vertices on the border of modified quadrants
+						if (z == numVerticesPerSize - 1)
+						{
+							if (southData.heights32Buffer != nullptr && southTerrainEdit != nullptr && !southTerrainEdit->northSideZMinus.needBlend && !terrainEdit->southSideZPlus.needBlend)
+							{
+								if (lastPhase)
+								{
+									southData.heightsUpdated = true;
+									updated = true;
+									southData.heights32Buffer->at<float>(x, 0, numVerticesPerSize) = f.f32;
+									southData.heights16Buffer->at<float>(x, 0, numVerticesPerSize) = half;
+								}
+								else
+								{
+									terrainEdit->southSideZPlus.needBlend = true;
+									southTerrainEdit->northSideZMinus.needBlend = true;
+								}
+							}
+							if (southwestData.heights32Buffer != nullptr && southwestTerrainEdit != nullptr && !southwestTerrainEdit->northSideZMinus.needBlend && westTerrainEdit != nullptr && !westTerrainEdit->southSideZPlus.needBlend)
+							{
+								if (lastPhase)
+								{
+									southwestData.heightsUpdated = true;
+									updated = true;
+									southwestData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, 0, numVerticesPerSize) = f1.f32;
+									southwestData.heights16Buffer->at<float>(numVerticesPerSize - 1 - x, 0, numVerticesPerSize) = half1;
+								}
+								else
+								{
+									southwestTerrainEdit->northSideZMinus.needBlend = true;
+									westTerrainEdit->southSideZPlus.needBlend = true;
+								}
+							}
+						}
+					}
+				}
+			}
+
+			terrainEdit->westSideXMinus.needBlend = false;
+			westTerrainEdit->eastSideXPlus.needBlend = false;
+		}
+
 		return updated;
 	}
 
@@ -2117,10 +2401,157 @@ namespace TheWorld_Utils
 		CacheQuadrantData& eastData,
 		CacheQuadrantData& northwestData,
 		CacheQuadrantData& northeastData,
-		CacheQuadrantData& southwesthData,
+		CacheQuadrantData& southwestData,
 		CacheQuadrantData& southeastData)
 	{
+		TerrainEdit* terrainEdit = (TerrainEdit*)data.terrainEditValues->ptr();
+		TerrainEdit* northTerrainEdit = nullptr;
+		if (northData.terrainEditValues != nullptr)
+			northTerrainEdit = (TerrainEdit*)northData.terrainEditValues->ptr();
+		TerrainEdit* southTerrainEdit = nullptr;
+		if (southData.terrainEditValues != nullptr)
+			southTerrainEdit = (TerrainEdit*)southData.terrainEditValues->ptr();
+		//TerrainEdit* westTerrainEdit = nullptr;
+		//if (westData.terrainEditValues != nullptr)
+		//	westTerrainEdit = (TerrainEdit*)westData.terrainEditValues->ptr();
+		TerrainEdit* eastTerrainEdit = nullptr;
+		if (eastData.terrainEditValues != nullptr)
+			eastTerrainEdit = (TerrainEdit*)eastData.terrainEditValues->ptr();
+		//TerrainEdit* northwestTerrainEdit = nullptr;
+		//if (northwestData.terrainEditValues != nullptr)
+		//	northwestTerrainEdit = (TerrainEdit*)northwestData.terrainEditValues->ptr();
+		TerrainEdit* northeastTerrainEdit = nullptr;
+		if (northeastData.terrainEditValues != nullptr)
+			northeastTerrainEdit = (TerrainEdit*)northeastData.terrainEditValues->ptr();
+		//TerrainEdit* southwestTerrainEdit = nullptr;
+		//if (southwestData.terrainEditValues != nullptr)
+		//	southwestTerrainEdit = (TerrainEdit*)southwestData.terrainEditValues->ptr();
+		TerrainEdit* southeastTerrainEdit = nullptr;
+		if (southeastData.terrainEditValues != nullptr)
+			southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
+
 		bool updated = false;
+
+		if (eastData.heights32Buffer != nullptr && eastTerrainEdit != nullptr && (terrainEdit->eastSideXPlus.needBlend || eastTerrainEdit->westSideXMinus.needBlend))
+		{
+			// moving on south side: every x with z = 0 
+			for (size_t z = 0; z < numVerticesPerSize; z++)
+			{
+				float gapForEachQuandrantOnBorder = abs(data.heights32Buffer->at<float>(numVerticesPerSize - 1, z, numVerticesPerSize) - eastData.heights32Buffer->at<float>(0, z, numVerticesPerSize)) / 2;
+				size_t numVerticesToAdjustInEachQuadrant = (size_t)ceilf(gapForEachQuandrantOnBorder / (gridStepInWU / 2));
+				if (numVerticesToAdjustInEachQuadrant > numVerticesPerSize / 2)
+					numVerticesToAdjustInEachQuadrant = numVerticesPerSize / 2;
+
+				if (numVerticesToAdjustInEachQuadrant > 0)
+				{
+					float increment = 0.0f;
+					float averageStep = (abs(data.heights32Buffer->at<float>(numVerticesPerSize - 1 - (numVerticesToAdjustInEachQuadrant - 1), z, numVerticesPerSize)
+						- eastData.heights32Buffer->at<float>(numVerticesToAdjustInEachQuadrant - 1, z, numVerticesPerSize)) / 2) / numVerticesToAdjustInEachQuadrant;
+
+					data.heightsUpdated = true;
+					eastData.heightsUpdated = true;
+					updated = true;
+
+					for (int x = (int)numVerticesToAdjustInEachQuadrant - 1; x >= 0; x--)
+					{
+						float currentGapInEachQuadrant = abs(data.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize) - eastData.heights32Buffer->at<float>(x, z, numVerticesPerSize)) / 2;
+						float desideredGapInEachQuadrant = abs(averageStep) * x;
+						if (currentGapInEachQuadrant > desideredGapInEachQuadrant)
+						{
+							increment = currentGapInEachQuadrant - desideredGapInEachQuadrant;
+							if (data.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize) > eastData.heights32Buffer->at<float>(x, z, numVerticesPerSize))
+								increment = -increment;
+						}
+						else
+							increment = 0.0f;
+
+						data.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize) += increment;
+						TheWorld_Utils::FLOAT_32 f(data.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize));
+						uint16_t half = half_from_float(f.u32);
+						data.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1 - x, z, numVerticesPerSize) = half;
+
+						eastData.heights32Buffer->at<float>(x, z, numVerticesPerSize) -= increment;
+						TheWorld_Utils::FLOAT_32 f1(eastData.heights32Buffer->at<float>(x, z, numVerticesPerSize));
+						uint16_t half1 = half_from_float(f1.u32);
+						eastData.heights16Buffer->at<uint16_t>(x, z, numVerticesPerSize) = half1;
+
+						// if last phase we need to reconcile vertices on the border of modified quadrants
+						if (z == 0)
+						{
+							if (northData.heights32Buffer != nullptr && northTerrainEdit != nullptr && !northTerrainEdit->southSideZPlus.needBlend && !terrainEdit->northSideZMinus.needBlend)
+							{
+								if (lastPhase)
+								{
+									northData.heightsUpdated = true;
+									updated = true;
+									northData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, numVerticesPerSize - 1, numVerticesPerSize) = f.f32;
+									northData.heights16Buffer->at<float>(numVerticesPerSize - 1 - x, numVerticesPerSize - 1, numVerticesPerSize) = half;
+								}
+								else
+								{
+									terrainEdit->northSideZMinus.needBlend = true;
+									northTerrainEdit->southSideZPlus.needBlend = true;
+								}
+							}
+							if (northeastData.heights32Buffer != nullptr && northeastTerrainEdit != nullptr && !northeastTerrainEdit->southSideZPlus.needBlend && eastTerrainEdit != nullptr && !eastTerrainEdit->northSideZMinus.needBlend)
+							{
+								if (lastPhase)
+								{
+									northeastData.heightsUpdated = true;
+									updated = true;
+									northeastData.heights32Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize) = f1.f32;
+									northeastData.heights16Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize) = half1;
+								}
+								else
+								{
+									northeastTerrainEdit->southSideZPlus.needBlend = true;
+									eastTerrainEdit->northSideZMinus.needBlend = true;
+								}
+							}
+						}
+
+						// if last phase we need to reconcile vertices on the border of modified quadrants
+						if (z == numVerticesPerSize - 1)
+						{
+							if (southData.heights32Buffer != nullptr && southTerrainEdit != nullptr && !southTerrainEdit->northSideZMinus.needBlend && !terrainEdit->southSideZPlus.needBlend)
+							{
+								if (lastPhase)
+								{
+									southData.heightsUpdated = true;
+									updated = true;
+									southData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, 0, numVerticesPerSize) = f.f32;
+									southData.heights16Buffer->at<float>(numVerticesPerSize - 1 - x, 0, numVerticesPerSize) = half;
+								}
+								else
+								{
+									terrainEdit->southSideZPlus.needBlend = true;
+									southTerrainEdit->northSideZMinus.needBlend = true;
+								}
+							}
+							if (southeastData.heights32Buffer != nullptr && southeastTerrainEdit != nullptr && !southeastTerrainEdit->northSideZMinus.needBlend && eastTerrainEdit != nullptr && !eastTerrainEdit->southSideZPlus.needBlend)
+							{
+								if (lastPhase)
+								{
+									southeastData.heightsUpdated = true;
+									updated = true;
+									southeastData.heights32Buffer->at<float>(x, 0, numVerticesPerSize) = f1.f32;
+									southeastData.heights16Buffer->at<float>(x, 0, numVerticesPerSize) = half1;
+								}
+								else
+								{
+									southeastTerrainEdit->northSideZMinus.needBlend = true;
+									eastTerrainEdit->southSideZPlus.needBlend = true;
+								}
+							}
+						}
+					}
+				}
+			}
+
+			terrainEdit->eastSideXPlus.needBlend = false;
+			eastTerrainEdit->westSideXMinus.needBlend = false;
+		}
+
 		return updated;
 	}
 
