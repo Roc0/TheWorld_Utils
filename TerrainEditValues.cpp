@@ -39,6 +39,7 @@ namespace TheWorld_Utils
 			noise.amplitude = 100;
 			noise.scaleFactor = 1.0f;
 			noise.desideredMinHeight = 0.0f;
+			noise.desideredMinHeigthMandatory = false;
 		}
 		break;
 		case TerrainEdit::TerrainType::campaign_1:
@@ -71,6 +72,40 @@ namespace TheWorld_Utils
 			noise.amplitude = 100;
 			noise.scaleFactor = 1.0f;
 			noise.desideredMinHeight = 0.0f;
+			noise.desideredMinHeigthMandatory = true;
+		}
+		break;
+		case TerrainEdit::TerrainType::plateau_1:
+		{
+			noise.noiseType = FastNoiseLite::NoiseType::NoiseType_Perlin;
+			noise.rotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+			noise.noiseSeed = 1337;
+			noise.frequency = 0.0005f;
+			noise.fractalType = FastNoiseLite::FractalType::FractalType_FBm;
+			noise.fractalOctaves = 3;
+			noise.fractalLacunarity = 2.0f;
+			noise.fractalGain = 10.0f;
+			noise.fractalWeightedStrength = 0.0f;
+			noise.fractalPingPongStrength = 2.0f;
+
+			noise.cellularDistanceFunction = FastNoiseLite::CellularDistanceFunction::CellularDistanceFunction_EuclideanSq;
+			noise.cellularReturnType = FastNoiseLite::CellularReturnType::CellularReturnType_Distance;
+			noise.cellularJitter = 1.0f;
+
+			noise.warpNoiseDomainWarpType = -1;
+			noise.warpNoiseRotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+			noise.warpNoiseSeed = 1337;
+			noise.warpNoiseDomainWarpAmp = 30.0f;
+			noise.warpNoiseFrequency = 0.005f;
+			noise.warpNoieseFractalType = FastNoiseLite::FractalType::FractalType_None;
+			noise.warpNoiseFractalOctaves = 5;
+			noise.warpNoiseFractalLacunarity = 2.0f;
+			noise.warpNoiseFractalGain = 0.5f;
+
+			noise.amplitude = 100;
+			noise.scaleFactor = 1.0f;
+			noise.desideredMinHeight = 0.0f;
+			noise.desideredMinHeigthMandatory = false;
 		}
 		break;
 		case TerrainEdit::TerrainType::low_hills:
@@ -103,6 +138,7 @@ namespace TheWorld_Utils
 			noise.amplitude = 1000;
 			noise.scaleFactor = 1.0f;
 			noise.desideredMinHeight = 0.0f;
+			noise.desideredMinHeigthMandatory = true;
 		}
 		break;
 		case TerrainEdit::TerrainType::high_hills:
@@ -135,6 +171,7 @@ namespace TheWorld_Utils
 			noise.amplitude = 2000;
 			noise.scaleFactor = 1.0f;
 			noise.desideredMinHeight = 0.0f;
+			noise.desideredMinHeigthMandatory = true;
 		}
 		break;
 		case TerrainEdit::TerrainType::low_mountains:
@@ -164,9 +201,43 @@ namespace TheWorld_Utils
 			noise.warpNoiseFractalLacunarity = 2.0f;
 			noise.warpNoiseFractalGain = 0.5f;
 
-			noise.amplitude = 3000;
-			noise.scaleFactor = 1.0f / 3;
-			noise.desideredMinHeight = -50.0f;
+			noise.amplitude = 2500;
+			noise.scaleFactor = 1.0f / 1.5f;
+			noise.desideredMinHeight = 0.0f;
+			noise.desideredMinHeigthMandatory = true;
+		}
+		break;
+		case TerrainEdit::TerrainType::low_mountains_grow:
+		{
+			noise.noiseType = FastNoiseLite::NoiseType::NoiseType_Perlin;
+			noise.rotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+			noise.noiseSeed = 1337;
+			noise.frequency = 0.0005f;
+			noise.fractalType = FastNoiseLite::FractalType::FractalType_FBm;
+			noise.fractalOctaves = 5;
+			noise.fractalLacunarity = 2.0f;
+			noise.fractalGain = 0.5f;
+			noise.fractalWeightedStrength = 0.0f;
+			noise.fractalPingPongStrength = 2.0f;
+
+			noise.cellularDistanceFunction = FastNoiseLite::CellularDistanceFunction::CellularDistanceFunction_EuclideanSq;
+			noise.cellularReturnType = FastNoiseLite::CellularReturnType::CellularReturnType_Distance;
+			noise.cellularJitter = 1.0f;
+
+			noise.warpNoiseDomainWarpType = -1;
+			noise.warpNoiseRotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+			noise.warpNoiseSeed = 1337;
+			noise.warpNoiseDomainWarpAmp = 30.0f;
+			noise.warpNoiseFrequency = 0.005f;
+			noise.warpNoieseFractalType = FastNoiseLite::FractalType::FractalType_None;
+			noise.warpNoiseFractalOctaves = 5;
+			noise.warpNoiseFractalLacunarity = 2.0f;
+			noise.warpNoiseFractalGain = 0.5f;
+
+			noise.amplitude = 2500;
+			noise.scaleFactor = 1.0f / 1.5f;
+			noise.desideredMinHeight = 0.0f;
+			noise.desideredMinHeigthMandatory = false;
 		}
 		break;
 		case TerrainEdit::TerrainType::high_mountains_1:
@@ -196,9 +267,43 @@ namespace TheWorld_Utils
 			noise.warpNoiseFractalLacunarity = 2.0f;
 			noise.warpNoiseFractalGain = 0.5f;
 
-			noise.amplitude = 6000;
-			noise.scaleFactor = 1.0f / 3;
-			noise.desideredMinHeight = -100.0f;
+			noise.amplitude = 4000;
+			noise.scaleFactor = 1.0f / 1.5f;
+			noise.desideredMinHeight = 0.0f;
+			noise.desideredMinHeigthMandatory = true;
+		}
+		break;
+		case TerrainEdit::TerrainType::high_mountains_1_grow:
+		{
+			noise.noiseType = FastNoiseLite::NoiseType::NoiseType_Perlin;
+			noise.rotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+			noise.noiseSeed = 1337;
+			noise.frequency = 0.0005f;
+			noise.fractalType = FastNoiseLite::FractalType::FractalType_FBm;
+			noise.fractalOctaves = 5;
+			noise.fractalLacunarity = 2.0f;
+			noise.fractalGain = 0.5f;
+			noise.fractalWeightedStrength = 0.0f;
+			noise.fractalPingPongStrength = 2.0f;
+
+			noise.cellularDistanceFunction = FastNoiseLite::CellularDistanceFunction::CellularDistanceFunction_EuclideanSq;
+			noise.cellularReturnType = FastNoiseLite::CellularReturnType::CellularReturnType_Distance;
+			noise.cellularJitter = 1.0f;
+
+			noise.warpNoiseDomainWarpType = -1;
+			noise.warpNoiseRotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+			noise.warpNoiseSeed = 1337;
+			noise.warpNoiseDomainWarpAmp = 30.0f;
+			noise.warpNoiseFrequency = 0.005f;
+			noise.warpNoieseFractalType = FastNoiseLite::FractalType::FractalType_None;
+			noise.warpNoiseFractalOctaves = 5;
+			noise.warpNoiseFractalLacunarity = 2.0f;
+			noise.warpNoiseFractalGain = 0.5f;
+
+			noise.amplitude = 4000;
+			noise.scaleFactor = 1.0f / 1.5f;
+			noise.desideredMinHeight = 0.0f;
+			noise.desideredMinHeigthMandatory = false;
 		}
 		break;
 		case TerrainEdit::TerrainType::high_mountains_2:
@@ -229,8 +334,42 @@ namespace TheWorld_Utils
 			noise.warpNoiseFractalGain = 0.5f;
 
 			noise.amplitude = 9000;
-			noise.scaleFactor = 1.0f / 3;
-			noise.desideredMinHeight = -200.0f;
+			noise.scaleFactor = 1.0f / 3.0f;
+			noise.desideredMinHeight = 0.0f;
+			noise.desideredMinHeigthMandatory = true;
+		}
+		break;
+		case TerrainEdit::TerrainType::high_mountains_2_grow:
+		{
+			noise.noiseType = FastNoiseLite::NoiseType::NoiseType_Perlin;
+			noise.rotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+			noise.noiseSeed = 1337;
+			noise.frequency = 0.0005f;
+			noise.fractalType = FastNoiseLite::FractalType::FractalType_FBm;
+			noise.fractalOctaves = 5;
+			noise.fractalLacunarity = 2.0f;
+			noise.fractalGain = 0.5f;
+			noise.fractalWeightedStrength = 0.0f;
+			noise.fractalPingPongStrength = 2.0f;
+
+			noise.cellularDistanceFunction = FastNoiseLite::CellularDistanceFunction::CellularDistanceFunction_EuclideanSq;
+			noise.cellularReturnType = FastNoiseLite::CellularReturnType::CellularReturnType_Distance;
+			noise.cellularJitter = 1.0f;
+
+			noise.warpNoiseDomainWarpType = -1;
+			noise.warpNoiseRotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+			noise.warpNoiseSeed = 1337;
+			noise.warpNoiseDomainWarpAmp = 30.0f;
+			noise.warpNoiseFrequency = 0.005f;
+			noise.warpNoieseFractalType = FastNoiseLite::FractalType::FractalType_None;
+			noise.warpNoiseFractalOctaves = 5;
+			noise.warpNoiseFractalLacunarity = 2.0f;
+			noise.warpNoiseFractalGain = 0.5f;
+
+			noise.amplitude = 9000;
+			noise.scaleFactor = 1.0f / 3.0f;
+			noise.desideredMinHeight = 0.0f;
+			noise.desideredMinHeigthMandatory = false;
 		}
 		break;
 		case TerrainEdit::TerrainType::noise_1:
@@ -264,6 +403,7 @@ namespace TheWorld_Utils
 			noise.amplitude = 0;
 			noise.scaleFactor = 1.0f;
 			noise.desideredMinHeight = 0.0f;
+			noise.desideredMinHeigthMandatory = false;
 		}
 		break;
 		}

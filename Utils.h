@@ -179,6 +179,7 @@ namespace TheWorld_Utils
 		unsigned int amplitude;		// range of heights in WU (noise is from -1 to 1)
 		float scaleFactor;
 		float desideredMinHeight;
+		bool desideredMinHeigthMandatory;
 	};
 	
 	class TerrainSideInfo
@@ -197,12 +198,16 @@ namespace TheWorld_Utils
 			unknown = 0
 			, jagged_1 = 1
 			, campaign_1 = 2
-			, low_hills = 3
-			, high_hills = 4
-			, low_mountains = 5
-			, high_mountains_1 = 6
-			, high_mountains_2 = 7
-			, noise_1 = 8
+			, plateau_1 = 3
+			, low_hills = 4
+			, high_hills = 5
+			, low_mountains = 6
+			, low_mountains_grow = 7
+			, high_mountains_1 = 8
+			, high_mountains_1_grow = 9
+			, high_mountains_2 = 10
+			, high_mountains_2_grow = 11
+			, noise_1 = 12
 		};
 
 		size_t size;
@@ -213,9 +218,9 @@ namespace TheWorld_Utils
 		float minHeight;
 		float maxHeight;
 
-		TerrainSideInfo eastSideXPlus;	// X growing
-		TerrainSideInfo westSideXMinus;	// X lowering
-		TerrainSideInfo southSideZPlus;	// Z growing
+		TerrainSideInfo eastSideXPlus;		// X growing
+		TerrainSideInfo westSideXMinus;		// X lowering
+		TerrainSideInfo southSideZPlus;		// Z growing
 		TerrainSideInfo northSideZMinus;	// Z lowering
 
 		NoiseValues noise;
@@ -226,6 +231,7 @@ namespace TheWorld_Utils
 		__declspec(dllexport) void deserialize(TheWorld_Utils::MemoryBuffer& buffer);
 		__declspec(dllexport) static std::string terrainTypeString(enum class TerrainEdit::TerrainType terrainType);
 		__declspec(dllexport) static enum class TerrainEdit::TerrainType terrainTypeEnum(std::string& terrainType);
+		__declspec(dllexport) void adjustValues(TerrainEdit* northSideZMinus, TerrainEdit* southSideZPlus, TerrainEdit* westSideXMinus, TerrainEdit* eastSideXPlus);
 	};
 
 	template<> MYAPI void MemoryBuffer::populateVector<float>(std::vector<float>& v);

@@ -71,6 +71,11 @@ namespace TheWorld_Utils
 			return "campaign_1";
 		}
 		break;
+		case TerrainEdit::TerrainType::plateau_1:
+		{
+			return "plateau_1";
+		}
+		break;
 		case TerrainEdit::TerrainType::low_hills:
 		{
 			return "low_hills";
@@ -86,14 +91,29 @@ namespace TheWorld_Utils
 			return "low_mountains";
 		}
 		break;
+		case TerrainEdit::TerrainType::low_mountains_grow:
+		{
+			return "low_mountains_grow";
+		}
+		break;
 		case TerrainEdit::TerrainType::high_mountains_1:
 		{
 			return "high_mountains_1";
 		}
 		break;
+		case TerrainEdit::TerrainType::high_mountains_1_grow:
+		{
+			return "high_mountains_1_grow";
+		}
+		break;
 		case TerrainEdit::TerrainType::high_mountains_2:
 		{
 			return "high_mountains_2";
+		}
+		break;
+		case TerrainEdit::TerrainType::high_mountains_2_grow:
+		{
+			return "high_mountains_2_grow";
 		}
 		break;
 		default:
@@ -110,16 +130,24 @@ namespace TheWorld_Utils
 			return TerrainEdit::TerrainType::noise_1;
 		else if (terrainType == "campaign_1")
 			return TerrainEdit::TerrainType::campaign_1;
+		else if (terrainType == "plateau_1")
+			return TerrainEdit::TerrainType::plateau_1;
 		else if (terrainType == "low_hills")
 			return TerrainEdit::TerrainType::low_hills;
 		else if (terrainType == "high_hills")
 			return TerrainEdit::TerrainType::high_hills;
 		else if (terrainType == "low_mountains")
 			return TerrainEdit::TerrainType::low_mountains;
+		else if (terrainType == "low_mountains_grow")
+			return TerrainEdit::TerrainType::low_mountains_grow;
 		else if (terrainType == "high_mountains_1")
 			return TerrainEdit::TerrainType::high_mountains_1;
+		else if (terrainType == "high_mountains_1_grow")
+			return TerrainEdit::TerrainType::high_mountains_1_grow;
 		else if (terrainType == "high_mountains_2")
 			return TerrainEdit::TerrainType::high_mountains_2;
+		else if (terrainType == "high_mountains_2_grow")
+			return TerrainEdit::TerrainType::high_mountains_2_grow;
 		else
 			return TerrainEdit::TerrainType::unknown;
 	}
@@ -137,6 +165,40 @@ namespace TheWorld_Utils
 		size_t saveSize = size;
 		memcpy(this, buffer.ptr(), minLen);
 		size = saveSize;
+	}
+
+	void TerrainEdit::adjustValues(TerrainEdit* northSideZMinus, TerrainEdit* southSideZPlus, TerrainEdit* westSideXMinus, TerrainEdit* eastSideXPlus)
+	{
+		if (!noise.desideredMinHeigthMandatory)
+		{
+			int num = 0;
+			float averageHeight = 0;
+
+			if (northSideZMinus != nullptr)
+			{
+				averageHeight += (northSideZMinus->southSideZPlus.maxHeight + northSideZMinus->southSideZPlus.minHeight) / 2;
+				num++;
+			}
+			if (southSideZPlus != nullptr)
+			{
+				averageHeight += (southSideZPlus->northSideZMinus.maxHeight + southSideZPlus->northSideZMinus.minHeight) / 2;
+				num++;
+			}
+			if (westSideXMinus != nullptr)
+			{
+				averageHeight += (westSideXMinus->eastSideXPlus.maxHeight + westSideXMinus->eastSideXPlus.minHeight) / 2;
+				num++;
+			}
+			if (eastSideXPlus != nullptr)
+			{
+				averageHeight += (eastSideXPlus->westSideXMinus.maxHeight + eastSideXPlus->westSideXMinus.minHeight) / 2;
+				num++;
+			}
+
+			if (num != 0)
+				noise.desideredMinHeight = averageHeight / num;
+		}
+
 	}
 
 	MemoryBuffer::MemoryBuffer(void)
@@ -1745,8 +1807,8 @@ namespace TheWorld_Utils
 		bool updated = false;
 
 		TerrainEdit* terrainEdit = (TerrainEdit*)data.terrainEditValues->ptr();
-		if (!terrainEdit->northSideZMinus.needBlend && !terrainEdit->southSideZPlus.needBlend && !terrainEdit->eastSideXPlus.needBlend && !terrainEdit->westSideXMinus.needBlend)
-			return updated;
+		//if (!terrainEdit->northSideZMinus.needBlend && !terrainEdit->southSideZPlus.needBlend && !terrainEdit->eastSideXPlus.needBlend && !terrainEdit->westSideXMinus.needBlend)
+		//	return updated;
 		
 		if (blendQuadrantOnNorthSide(numVerticesPerSize, gridStepInWU, lastPhase, data, northData, southData, westData, eastData, northwestData, northeastData, southwestData, southeastData))
 			updated = true;
@@ -1913,6 +1975,11 @@ namespace TheWorld_Utils
 		CacheQuadrantData& southwestData,
 		CacheQuadrantData& southeastData)
 	{
+		bool updated = false;
+
+		if (data.terrainEditValues == nullptr)
+			return updated;
+
 		TerrainEdit* terrainEdit = (TerrainEdit*)data.terrainEditValues->ptr();
 		TerrainEdit* northTerrainEdit = nullptr;
 		if (northData.terrainEditValues != nullptr)
@@ -1939,8 +2006,6 @@ namespace TheWorld_Utils
 		//if (southeastData.terrainEditValues != nullptr)
 		//	southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
 
-		bool updated = false;
-		
 		if (northData.heights32Buffer != nullptr && northTerrainEdit != nullptr && (terrainEdit->northSideZMinus.needBlend || northTerrainEdit->southSideZPlus.needBlend))
 		{
 			// moving on north side: every x with z = 0 
@@ -1999,7 +2064,7 @@ namespace TheWorld_Utils
 									westData.heightsUpdated = true;
 									updated = true;
 									westData.heights32Buffer->at<float>(numVerticesPerSize - 1, z, numVerticesPerSize) = f.f32;
-									westData.heights16Buffer->at<float>(numVerticesPerSize - 1, z, numVerticesPerSize) = half;
+									westData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1, z, numVerticesPerSize) = half;
 								}
 								else
 								{
@@ -2014,7 +2079,7 @@ namespace TheWorld_Utils
 									northwestData.heightsUpdated = true;
 									updated = true;
 									northwestData.heights32Buffer->at<float>(numVerticesPerSize - 1, numVerticesPerSize - 1 - z, numVerticesPerSize) = f1.f32;
-									northwestData.heights16Buffer->at<float>(numVerticesPerSize - 1, numVerticesPerSize - 1 - z, numVerticesPerSize) = half1;
+									northwestData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1, numVerticesPerSize - 1 - z, numVerticesPerSize) = half1;
 								}
 								else
 								{
@@ -2034,7 +2099,7 @@ namespace TheWorld_Utils
 									eastData.heightsUpdated = true;
 									updated = true;
 									eastData.heights32Buffer->at<float>(0, z, numVerticesPerSize) = f.f32;
-									eastData.heights16Buffer->at<float>(0, z, numVerticesPerSize) = half;
+									eastData.heights16Buffer->at<uint16_t>(0, z, numVerticesPerSize) = half;
 								}
 								else
 								{
@@ -2049,7 +2114,7 @@ namespace TheWorld_Utils
 									northeastData.heightsUpdated = true;
 									updated = true;
 									northeastData.heights32Buffer->at<float>(0, numVerticesPerSize - 1 - z, numVerticesPerSize) = f1.f32;
-									northeastData.heights16Buffer->at<float>(0, numVerticesPerSize - 1 - z, numVerticesPerSize) = half1;
+									northeastData.heights16Buffer->at<uint16_t>(0, numVerticesPerSize - 1 - z, numVerticesPerSize) = half1;
 								}
 								else
 								{
@@ -2080,6 +2145,11 @@ namespace TheWorld_Utils
 		CacheQuadrantData& southwestData,
 		CacheQuadrantData& southeastData)
 	{
+		bool updated = false;
+
+		if (data.terrainEditValues == nullptr)
+			return updated;
+
 		TerrainEdit* terrainEdit = (TerrainEdit*)data.terrainEditValues->ptr();
 		//TerrainEdit* northTerrainEdit = nullptr;
 		//if (northData.terrainEditValues != nullptr)
@@ -2105,8 +2175,6 @@ namespace TheWorld_Utils
 		TerrainEdit* southeastTerrainEdit = nullptr;
 		if (southeastData.terrainEditValues != nullptr)
 			southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
-
-		bool updated = false;
 
 		if (southData.heights32Buffer != nullptr && southTerrainEdit != nullptr && (terrainEdit->southSideZPlus.needBlend || southTerrainEdit->northSideZMinus.needBlend))
 		{
@@ -2161,7 +2229,7 @@ namespace TheWorld_Utils
 									westData.heightsUpdated = true;
 									updated = true;
 									westData.heights32Buffer->at<float>(numVerticesPerSize - 1, numVerticesPerSize - 1 - z, numVerticesPerSize) = f.f32;
-									westData.heights16Buffer->at<float>(numVerticesPerSize - 1, numVerticesPerSize - 1 - z, numVerticesPerSize) = half;
+									westData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1, numVerticesPerSize - 1 - z, numVerticesPerSize) = half;
 								}
 								else
 								{
@@ -2176,7 +2244,7 @@ namespace TheWorld_Utils
 									southwestData.heightsUpdated = true;
 									updated = true;
 									southwestData.heights32Buffer->at<float>(numVerticesPerSize - 1, z, numVerticesPerSize) = f1.f32;
-									southwestData.heights16Buffer->at<float>(numVerticesPerSize - 1, z, numVerticesPerSize) = half1;
+									southwestData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1, z, numVerticesPerSize) = half1;
 								}
 								else
 								{
@@ -2196,7 +2264,7 @@ namespace TheWorld_Utils
 									eastData.heightsUpdated = true;
 									updated = true;
 									eastData.heights32Buffer->at<float>(0, numVerticesPerSize - 1 - z, numVerticesPerSize) = f.f32;
-									eastData.heights16Buffer->at<float>(0, numVerticesPerSize - 1 - z, numVerticesPerSize) = half;
+									eastData.heights16Buffer->at<uint16_t>(0, numVerticesPerSize - 1 - z, numVerticesPerSize) = half;
 								}
 								else
 								{
@@ -2211,7 +2279,7 @@ namespace TheWorld_Utils
 									southeastData.heightsUpdated = true;
 									updated = true;
 									southeastData.heights32Buffer->at<float>(0, z, numVerticesPerSize) = f1.f32;
-									southeastData.heights16Buffer->at<float>(0, z, numVerticesPerSize) = half1;
+									southeastData.heights16Buffer->at<uint16_t>(0, z, numVerticesPerSize) = half1;
 								}
 								else
 								{
@@ -2242,6 +2310,11 @@ namespace TheWorld_Utils
 		CacheQuadrantData& southwestData,
 		CacheQuadrantData& southeastData)
 	{
+		bool updated = false;
+
+		if (data.terrainEditValues == nullptr)
+			return updated;
+
 		TerrainEdit* terrainEdit = (TerrainEdit*)data.terrainEditValues->ptr();
 		TerrainEdit* northTerrainEdit = nullptr;
 		if (northData.terrainEditValues != nullptr)
@@ -2267,8 +2340,6 @@ namespace TheWorld_Utils
 		//TerrainEdit* southeastTerrainEdit = nullptr;
 		//if (southeastData.terrainEditValues != nullptr)
 		//	southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
-
-		bool updated = false;
 
 		if (westData.heights32Buffer != nullptr && westTerrainEdit != nullptr && (terrainEdit->westSideXMinus.needBlend || westTerrainEdit->eastSideXPlus.needBlend))
 		{
@@ -2323,7 +2394,7 @@ namespace TheWorld_Utils
 									northData.heightsUpdated = true;
 									updated = true;
 									northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize) = f.f32;
-									northData.heights16Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize) = half;
+									northData.heights16Buffer->at<uint16_t>(x, numVerticesPerSize - 1, numVerticesPerSize) = half;
 								}
 								else
 								{
@@ -2338,7 +2409,7 @@ namespace TheWorld_Utils
 									northwestData.heightsUpdated = true;
 									updated = true;
 									northwestData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, numVerticesPerSize - 1, numVerticesPerSize) = f1.f32;
-									northwestData.heights16Buffer->at<float>(numVerticesPerSize - 1 - x, numVerticesPerSize - 1, numVerticesPerSize) = half1;
+									northwestData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1 - x, numVerticesPerSize - 1, numVerticesPerSize) = half1;
 								}
 								else
 								{
@@ -2358,7 +2429,7 @@ namespace TheWorld_Utils
 									southData.heightsUpdated = true;
 									updated = true;
 									southData.heights32Buffer->at<float>(x, 0, numVerticesPerSize) = f.f32;
-									southData.heights16Buffer->at<float>(x, 0, numVerticesPerSize) = half;
+									southData.heights16Buffer->at<uint16_t>(x, 0, numVerticesPerSize) = half;
 								}
 								else
 								{
@@ -2373,7 +2444,7 @@ namespace TheWorld_Utils
 									southwestData.heightsUpdated = true;
 									updated = true;
 									southwestData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, 0, numVerticesPerSize) = f1.f32;
-									southwestData.heights16Buffer->at<float>(numVerticesPerSize - 1 - x, 0, numVerticesPerSize) = half1;
+									southwestData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1 - x, 0, numVerticesPerSize) = half1;
 								}
 								else
 								{
@@ -2404,6 +2475,11 @@ namespace TheWorld_Utils
 		CacheQuadrantData& southwestData,
 		CacheQuadrantData& southeastData)
 	{
+		bool updated = false;
+
+		if (data.terrainEditValues == nullptr)
+			return updated;
+
 		TerrainEdit* terrainEdit = (TerrainEdit*)data.terrainEditValues->ptr();
 		TerrainEdit* northTerrainEdit = nullptr;
 		if (northData.terrainEditValues != nullptr)
@@ -2429,8 +2505,6 @@ namespace TheWorld_Utils
 		TerrainEdit* southeastTerrainEdit = nullptr;
 		if (southeastData.terrainEditValues != nullptr)
 			southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
-
-		bool updated = false;
 
 		if (eastData.heights32Buffer != nullptr && eastTerrainEdit != nullptr && (terrainEdit->eastSideXPlus.needBlend || eastTerrainEdit->westSideXMinus.needBlend))
 		{
@@ -2485,7 +2559,7 @@ namespace TheWorld_Utils
 									northData.heightsUpdated = true;
 									updated = true;
 									northData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, numVerticesPerSize - 1, numVerticesPerSize) = f.f32;
-									northData.heights16Buffer->at<float>(numVerticesPerSize - 1 - x, numVerticesPerSize - 1, numVerticesPerSize) = half;
+									northData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1 - x, numVerticesPerSize - 1, numVerticesPerSize) = half;
 								}
 								else
 								{
@@ -2500,7 +2574,7 @@ namespace TheWorld_Utils
 									northeastData.heightsUpdated = true;
 									updated = true;
 									northeastData.heights32Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize) = f1.f32;
-									northeastData.heights16Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize) = half1;
+									northeastData.heights16Buffer->at<uint16_t>(x, numVerticesPerSize - 1, numVerticesPerSize) = half1;
 								}
 								else
 								{
@@ -2520,7 +2594,7 @@ namespace TheWorld_Utils
 									southData.heightsUpdated = true;
 									updated = true;
 									southData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, 0, numVerticesPerSize) = f.f32;
-									southData.heights16Buffer->at<float>(numVerticesPerSize - 1 - x, 0, numVerticesPerSize) = half;
+									southData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1 - x, 0, numVerticesPerSize) = half;
 								}
 								else
 								{
@@ -2535,7 +2609,7 @@ namespace TheWorld_Utils
 									southeastData.heightsUpdated = true;
 									updated = true;
 									southeastData.heights32Buffer->at<float>(x, 0, numVerticesPerSize) = f1.f32;
-									southeastData.heights16Buffer->at<float>(x, 0, numVerticesPerSize) = half1;
+									southeastData.heights16Buffer->at<uint16_t>(x, 0, numVerticesPerSize) = half1;
 								}
 								else
 								{
