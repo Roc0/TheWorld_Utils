@@ -1354,11 +1354,11 @@ namespace TheWorld_Utils
 					{
 						//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals1 1.2.3 ") + __FUNCTION__, "RGB");
 
-						normal = 0.5 * (normal + Eigen::Vector3d(1, 1, 1));
+						Eigen::Vector3d packedNormal = 0.5 * (normal + Eigen::Vector3d(1, 1, 1));
 						struct _RGB rgb;
-						rgb.r = (BYTE)(normal.x() * 255);	// normals coord are from 0 to 1 but if expressed as color in a normlamap are from 0 to 255
-						rgb.g = (BYTE)(normal.z() * 255);
-						rgb.b = (BYTE)(normal.y() * 255);
+						rgb.r = (BYTE)(packedNormal.x() * 255);	// normals coord are from 0 to 1 but if expressed as color in a normlamap are from 0 to 255
+						rgb.g = (BYTE)(packedNormal.z() * 255);
+						rgb.b = (BYTE)(packedNormal.y() * 255);
 						*_tempNormalmapBuffer = rgb;
 						_tempNormalmapBuffer++;
 					}
