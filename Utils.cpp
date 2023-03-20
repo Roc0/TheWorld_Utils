@@ -932,6 +932,8 @@ namespace TheWorld_Utils
 			terrainEdit->northSideZMinus.minHeight = FLT_MAX;
 			terrainEdit->northSideZMinus.maxHeight = FLT_MIN;
 
+			size_t maxIndex = numVerticesPerSize - 1;
+			
 			size_t idx = 0;
 			for (int z = 0; z < numVerticesPerSize; z++)
 				for (int x = 0; x < numVerticesPerSize; x++)
@@ -968,7 +970,7 @@ namespace TheWorld_Utils
 								terrainEdit->northSideZMinus.maxHeight = altitude;
 						}
 
-						if (x == numVerticesPerSize - 1)
+						if (x == maxIndex)
 						{
 							if (altitude < terrainEdit->eastSideXPlus.minHeight)
 								terrainEdit->eastSideXPlus.minHeight = altitude;
@@ -976,7 +978,7 @@ namespace TheWorld_Utils
 								terrainEdit->eastSideXPlus.maxHeight = altitude;
 						}
 
-						if (z == numVerticesPerSize - 1)
+						if (z == maxIndex)
 						{
 							if (altitude < terrainEdit->southSideZPlus.minHeight)
 								terrainEdit->southSideZPlus.minHeight = altitude;
@@ -1069,23 +1071,25 @@ namespace TheWorld_Utils
 		terrainEdit->northSideZMinus.minHeight = FLT_MAX;
 		terrainEdit->northSideZMinus.maxHeight = FLT_MIN;
 
+		size_t maxIndex = numVerticesPerSize - 1;
+
 		size_t idx = -1;
 		for (int z = 0; z < numVerticesPerSize; z++)
 			for (int x = 0; x < numVerticesPerSize; x++)
 			{
 				idx++;
 
-				if (x == numVerticesPerSize - 1 && z == 0)
+				if (x == maxIndex && z == 0)
 				{
-					assert(x == numVerticesPerSize - 1 && z == 0);
+					assert(x == maxIndex && z == 0);
 				}
-				if (x == 0 && z == numVerticesPerSize - 1)
+				if (x == 0 && z == maxIndex)
 				{
-					assert(x == 0 && z == numVerticesPerSize - 1);
+					assert(x == 0 && z == maxIndex);
 				}
-				if (x == numVerticesPerSize - 1 && z == numVerticesPerSize - 1)
+				if (x == maxIndex && z == maxIndex)
 				{
-					assert(x == numVerticesPerSize - 1 && z == numVerticesPerSize - 1);
+					assert(x == maxIndex && z == maxIndex);
 				}
 
 				float dist = TheWorld_Utils::Utils::getDistance(wmX, wmZ, (float)x * gridStepInWU + lowerXGridVertex, (float)z * gridStepInWU + lowerZGridVertex);
@@ -1120,7 +1124,7 @@ namespace TheWorld_Utils
 							terrainEdit->northSideZMinus.maxHeight = vectGridHeights[idx];
 					}
 
-					if (x == numVerticesPerSize - 1)
+					if (x == maxIndex)
 					{
 						if (vectGridHeights[idx] < terrainEdit->eastSideXPlus.minHeight)
 							terrainEdit->eastSideXPlus.minHeight = vectGridHeights[idx];
@@ -1128,7 +1132,7 @@ namespace TheWorld_Utils
 							terrainEdit->eastSideXPlus.maxHeight = vectGridHeights[idx];
 					}
 
-					if (z == numVerticesPerSize - 1)
+					if (z == maxIndex)
 					{
 						if (vectGridHeights[idx] < terrainEdit->southSideZPlus.minHeight)
 							terrainEdit->southSideZPlus.minHeight = vectGridHeights[idx];
@@ -1229,7 +1233,7 @@ namespace TheWorld_Utils
 						terrainEdit->northSideZMinus.maxHeight = vectGridHeights[idx];
 				}
 
-				if (x == numVerticesPerSize - 1)
+				if (x == maxIndex)
 				{
 					if (vectGridHeights[idx] < terrainEdit->eastSideXPlus.minHeight)
 						terrainEdit->eastSideXPlus.minHeight = vectGridHeights[idx];
@@ -1237,7 +1241,7 @@ namespace TheWorld_Utils
 						terrainEdit->eastSideXPlus.maxHeight = vectGridHeights[idx];
 				}
 
-				if (z == numVerticesPerSize - 1)
+				if (z == maxIndex)
 				{
 					if (vectGridHeights[idx] < terrainEdit->southSideZPlus.minHeight)
 						terrainEdit->southSideZPlus.minHeight = vectGridHeights[idx];
@@ -1261,6 +1265,8 @@ namespace TheWorld_Utils
 		normalsBuffer.adjustSize(requiredBufferSize);
 
 		struct TheWorld_Utils::_RGB* _tempNormalmapBuffer = (struct TheWorld_Utils::_RGB*)normalsBuffer.ptr();
+
+		size_t maxIndex = numVerticesPerSize - 1;
 
 		if (numVertices > 0)
 		{
@@ -1286,13 +1292,13 @@ namespace TheWorld_Utils
 						// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
 						// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
 						//Eigen::Vector3d P((float)x, h, (float)z);	// Verify
-						if (x < numVerticesPerSize - 1 && z < numVerticesPerSize - 1)
+						if (x < maxIndex && z < maxIndex)
 						{
 							float hr = float32HeigthsBuffer.at<float>(x + 1, z, numVerticesPerSize);
 							float hf = float32HeigthsBuffer.at<float>(x, z + 1, numVerticesPerSize);
 							v = Eigen::Vector3d(h - hr, gridStepInWU, h - hf).normalized();
 						}
-						else if (x == numVerticesPerSize - 1 && z == numVerticesPerSize - 1)
+						else if (x == maxIndex && z == maxIndex)
 						{
 							if (east_float32HeigthsBuffer.size() > 0 && south_float32HeigthsBuffer.size() > 0)
 							{
@@ -1307,7 +1313,7 @@ namespace TheWorld_Utils
 								v = Eigen::Vector3d(hl - h, gridStepInWU, hb - h).normalized();
 							}
 						}
-						else if (x == numVerticesPerSize - 1)	// && z < numVerticesPerSize - 1
+						else if (x == maxIndex)	// && z < maxIndex
 						{
 							if (east_float32HeigthsBuffer.size() > 0)
 							{
@@ -1322,7 +1328,7 @@ namespace TheWorld_Utils
 								v = Eigen::Vector3d(hl - h, gridStepInWU, h - hf).normalized();
 							}
 						}
-						else	// x < numVerticesPerSize - 1 && z == numVerticesPerSize - 1
+						else	// x < maxIndex && z == maxIndex
 						{
 							if (south_float32HeigthsBuffer.size() > 0)
 							{
@@ -1386,6 +1392,7 @@ namespace TheWorld_Utils
 
 		struct TheWorld_Utils::_RGB* _tempNormalmapBuffer = (struct TheWorld_Utils::_RGB*)normalsBuffer;
 
+		size_t maxIndex = numVerticesPerSize - 1;
 
 		if (vectGridHeights.size() > 0)
 		{
@@ -1412,7 +1419,7 @@ namespace TheWorld_Utils
 						// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
 						// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
 						//Eigen::Vector3d P((float)x, h, (float)z);	// Verify
-						if (x < numVerticesPerSize - 1 && z < numVerticesPerSize - 1)
+						if (x < maxIndex && z < maxIndex)
 						{
 							float hr = vectGridHeights[z * numVerticesPerSize + x + 1];
 							float hf = vectGridHeights[(z + 1) * numVerticesPerSize + x];
@@ -1427,7 +1434,7 @@ namespace TheWorld_Utils
 						}
 						else
 						{
-							if (x == numVerticesPerSize - 1 && z == 0)
+							if (x == maxIndex && z == 0)
 							{
 								float hf = vectGridHeights[(z + 1) * numVerticesPerSize + x];
 								float hl = vectGridHeights[z * numVerticesPerSize + x - 1];
@@ -1440,7 +1447,7 @@ namespace TheWorld_Utils
 								//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
 								//}
 							}
-							else if (x == 0 && z == numVerticesPerSize - 1)
+							else if (x == 0 && z == maxIndex)
 							{
 								float hr = vectGridHeights[z * numVerticesPerSize + x + 1];
 								float hb = vectGridHeights[(z - 1) * numVerticesPerSize + x];
@@ -1591,7 +1598,7 @@ namespace TheWorld_Utils
 					//{		// second impl.
 					//	BYTE* _float16HeightsBufferBegin = (BYTE*)_float16HeightsBuffer;
 					//	BYTE* _float32HeightsBufferBegin = (BYTE*)_float32HeightsBuffer;
-					//	size_t numVerticesPerSizeMinusOne = numVerticesPerSize - 1;
+					//	size_t numVerticesPerSizeMinusOne = maxIndex;
 					//	assert(TheWorld_Utils::Utils::isPowerOfTwo(int(numVerticesPerSizeMinusOne)));
 					//	size_t exponent = (size_t)log2(numVerticesPerSizeMinusOne * numVerticesPerSizeMinusOne);
 					//	*_float16HeightsBuffer = empyHalf;
@@ -1979,6 +1986,12 @@ namespace TheWorld_Utils
 			northeastData /*N*/, southeastData /*S*/, data /*W*/, emptyData /*E*/, northData /*NW*/, emptyData /*NE*/, southData /*SW*/, emptyData /*SE*/))
 			updated = true;
 
+		if (lastPhase)
+		{
+			if(blendBorders(numVerticesPerSize, gridStepInWU, lastPhase, data, northData, southData, westData, eastData))
+				updated = true;
+		}
+
 		if (data.heightsUpdated)
 		{
 			calcMinMxHeight(numVerticesPerSize, terrainEdit, *data.heights32Buffer);
@@ -2035,6 +2048,131 @@ namespace TheWorld_Utils
 		return updated;
 	}
 
+	bool MeshCacheBuffer::blendBorders(size_t numVerticesPerSize, float gridStepInWU, bool lastPhase,
+		CacheQuadrantData& data,
+		CacheQuadrantData& northData,
+		CacheQuadrantData& southData,
+		CacheQuadrantData& westData,
+		CacheQuadrantData& eastData)
+	{
+		bool updated = false;
+
+		if (data.heights32Buffer == nullptr || data.heights16Buffer == nullptr)
+			return updated;
+
+		size_t maxIndex = numVerticesPerSize - 1;
+
+		// North side
+		if (northData.heights32Buffer != nullptr && northData.heights16Buffer != nullptr)
+		{
+			for (size_t x = 0; x < numVerticesPerSize; x++)
+			{
+				float dataUpperBorderHeight = data.heights32Buffer->at<float>(x, 0, numVerticesPerSize);
+				float northDataLowerBorderHeight = northData.heights32Buffer->at<float>(x, maxIndex, numVerticesPerSize);
+				if (dataUpperBorderHeight != northDataLowerBorderHeight)
+				{
+					updated = true;
+					data.heightsUpdated = true;
+					northData.heightsUpdated = true;
+
+					if (dataUpperBorderHeight > northDataLowerBorderHeight)
+					{
+						data.heights32Buffer->at<float>(x, 0, numVerticesPerSize) = northDataLowerBorderHeight;
+						data.heights16Buffer->at<uint16_t>(x, 0, numVerticesPerSize) = northData.heights16Buffer->at<uint16_t>(x, maxIndex, numVerticesPerSize);
+					}
+					else
+					{
+						northData.heights32Buffer->at<float>(x, maxIndex, numVerticesPerSize) = dataUpperBorderHeight;
+						northData.heights16Buffer->at<uint16_t>(x, maxIndex, numVerticesPerSize) = data.heights16Buffer->at<uint16_t>(x, 0, numVerticesPerSize);
+					}
+				}
+			}
+		}
+
+		// South side
+		if (southData.heights32Buffer != nullptr && southData.heights16Buffer != nullptr)
+		{
+			for (size_t x = 0; x < numVerticesPerSize; x++)
+			{
+				float dataLowerBorderHeight = data.heights32Buffer->at<float>(x, maxIndex, numVerticesPerSize);
+				float southDataUpperBorderHeight = southData.heights32Buffer->at<float>(x, 0, numVerticesPerSize);
+				if (dataLowerBorderHeight != southDataUpperBorderHeight)
+				{
+					updated = true;
+					data.heightsUpdated = true;
+					southData.heightsUpdated = true;
+
+					if (dataLowerBorderHeight > southDataUpperBorderHeight)
+					{
+						data.heights32Buffer->at<float>(x, maxIndex, numVerticesPerSize) = southDataUpperBorderHeight;
+						data.heights16Buffer->at<uint16_t>(x, maxIndex, numVerticesPerSize) = southData.heights16Buffer->at<uint16_t>(x, 0, numVerticesPerSize);
+					}
+					else
+					{
+						southData.heights32Buffer->at<float>(x, 0, numVerticesPerSize) = dataLowerBorderHeight;
+						southData.heights16Buffer->at<uint16_t>(x, 0, numVerticesPerSize) = data.heights16Buffer->at<uint16_t>(x, maxIndex, numVerticesPerSize);
+					}
+				}
+			}
+		}
+
+		// West side
+		if (westData.heights32Buffer != nullptr && westData.heights16Buffer != nullptr)
+		{
+			for (size_t z = 0; z < numVerticesPerSize; z++)
+			{
+				float dataLeftBorderHeight = data.heights32Buffer->at<float>(0, z, numVerticesPerSize);
+				float westDataRightBorderHeight = westData.heights32Buffer->at<float>(maxIndex, z, numVerticesPerSize);
+				if (dataLeftBorderHeight != westDataRightBorderHeight)
+				{
+					updated = true;
+					data.heightsUpdated = true;
+					westData.heightsUpdated = true;
+
+					if (dataLeftBorderHeight > westDataRightBorderHeight)
+					{
+						data.heights32Buffer->at<float>(0, z, numVerticesPerSize) = westDataRightBorderHeight;
+						data.heights16Buffer->at<uint16_t>(0, z, numVerticesPerSize) = westData.heights16Buffer->at<uint16_t>(maxIndex, z, numVerticesPerSize);
+					}
+					else
+					{
+						westData.heights32Buffer->at<float>(maxIndex, z, numVerticesPerSize) = dataLeftBorderHeight;
+						westData.heights16Buffer->at<uint16_t>(maxIndex, z, numVerticesPerSize) = data.heights16Buffer->at<uint16_t>(0, z, numVerticesPerSize);
+					}
+				}
+			}
+		}
+
+		// East side
+		if (eastData.heights32Buffer != nullptr && eastData.heights16Buffer != nullptr)
+		{
+			for (size_t z = 0; z < numVerticesPerSize; z++)
+			{
+				float dataRightBorderHeight = data.heights32Buffer->at<float>(maxIndex, z, numVerticesPerSize);
+				float eastDataLeftBorderHeight = eastData.heights32Buffer->at<float>(0, z, numVerticesPerSize);
+				if (dataRightBorderHeight != eastDataLeftBorderHeight)
+				{
+					updated = true;
+					data.heightsUpdated = true;
+					eastData.heightsUpdated = true;
+
+					if (dataRightBorderHeight > eastDataLeftBorderHeight)
+					{
+						data.heights32Buffer->at<float>(maxIndex, z, numVerticesPerSize) = eastDataLeftBorderHeight;
+						data.heights16Buffer->at<uint16_t>(maxIndex, z, numVerticesPerSize) = eastData.heights16Buffer->at<uint16_t>(0, z, numVerticesPerSize);
+					}
+					else
+					{
+						eastData.heights32Buffer->at<float>(0, z, numVerticesPerSize) = dataRightBorderHeight;
+						eastData.heights16Buffer->at<uint16_t>(0, z, numVerticesPerSize) = data.heights16Buffer->at<uint16_t>(maxIndex, z, numVerticesPerSize);
+					}
+				}
+			}
+		}
+
+		return updated;
+	}
+		
 	void MeshCacheBuffer::calcMinMxHeight(size_t numVerticesPerSize, TheWorld_Utils::TerrainEdit* terrainEdit, TheWorld_Utils::MemoryBuffer& heights32Buffer)
 	{
 		terrainEdit->minHeight = FLT_MAX;
@@ -2047,6 +2185,8 @@ namespace TheWorld_Utils
 		terrainEdit->southSideZPlus.maxHeight = FLT_MIN;
 		terrainEdit->northSideZMinus.minHeight = FLT_MAX;
 		terrainEdit->northSideZMinus.maxHeight = FLT_MIN;
+
+		size_t maxIndex = numVerticesPerSize - 1;
 
 		for (size_t z = 0; z < numVerticesPerSize; z++)
 			for (size_t x = 0; x < numVerticesPerSize; x++)
@@ -2073,7 +2213,7 @@ namespace TheWorld_Utils
 						terrainEdit->northSideZMinus.maxHeight = h;
 				}
 
-				if (x == numVerticesPerSize - 1)
+				if (x == maxIndex)
 				{
 					if (h < terrainEdit->eastSideXPlus.minHeight)
 						terrainEdit->eastSideXPlus.minHeight = h;
@@ -2081,7 +2221,7 @@ namespace TheWorld_Utils
 						terrainEdit->eastSideXPlus.maxHeight = h;
 				}
 
-				if (z == numVerticesPerSize - 1)
+				if (z == maxIndex)
 				{
 					if (h < terrainEdit->southSideZPlus.minHeight)
 						terrainEdit->southSideZPlus.minHeight = h;
@@ -2133,12 +2273,14 @@ namespace TheWorld_Utils
 		//if (southeastData.terrainEditValues != nullptr)
 		//	southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
 
+		size_t maxIndex = numVerticesPerSize - 1;
+
 		if (northData.heights32Buffer != nullptr && northTerrainEdit != nullptr && (terrainEdit->northSideZMinus.needBlend || northTerrainEdit->southSideZPlus.needBlend))
 		{
 			// moving on north side: every x with z = 0 
 			for (size_t x = 0; x < numVerticesPerSize; x++)
 			{
-				float gapForEachQuandrantOnBorder = abs(data.heights32Buffer->at<float>(x, 0, numVerticesPerSize) - northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize)) / 2;
+				float gapForEachQuandrantOnBorder = abs(data.heights32Buffer->at<float>(x, 0, numVerticesPerSize) - northData.heights32Buffer->at<float>(x, maxIndex, numVerticesPerSize)) / 2;
 				size_t numVerticesToAdjustInEachQuadrant = (size_t)ceilf(gapForEachQuandrantOnBorder / (gridStepInWU / 2));
 				if (numVerticesToAdjustInEachQuadrant > numVerticesPerSize / 2)
 					numVerticesToAdjustInEachQuadrant = numVerticesPerSize / 2;
@@ -2147,7 +2289,7 @@ namespace TheWorld_Utils
 				{
 					float increment = 0.0f;
 					float averageStep = (abs(data.heights32Buffer->at<float>(x, numVerticesToAdjustInEachQuadrant - 1, numVerticesPerSize)
-								- northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - (numVerticesToAdjustInEachQuadrant - 1), numVerticesPerSize)) / 2) / numVerticesToAdjustInEachQuadrant;
+								- northData.heights32Buffer->at<float>(x, maxIndex - (numVerticesToAdjustInEachQuadrant - 1), numVerticesPerSize)) / 2) / numVerticesToAdjustInEachQuadrant;
 
 					data.heightsUpdated = true;
 					northData.heightsUpdated = true;
@@ -2155,12 +2297,12 @@ namespace TheWorld_Utils
 
 					for (int z = (int)numVerticesToAdjustInEachQuadrant - 1; z >= 0; z--)
 					{
-						float currentGapInEachQuadrant = abs(data.heights32Buffer->at<float>(x, z, numVerticesPerSize) - northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize)) / 2;
+						float currentGapInEachQuadrant = abs(data.heights32Buffer->at<float>(x, z, numVerticesPerSize) - northData.heights32Buffer->at<float>(x, maxIndex - z, numVerticesPerSize)) / 2;
 						float desideredGapInEachQuadrant = abs(averageStep) * z;
 						if (currentGapInEachQuadrant > desideredGapInEachQuadrant)
 						{
 							increment = currentGapInEachQuadrant - desideredGapInEachQuadrant;
-							if (data.heights32Buffer->at<float>(x, z, numVerticesPerSize) > northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize))
+							if (data.heights32Buffer->at<float>(x, z, numVerticesPerSize) > northData.heights32Buffer->at<float>(x, maxIndex - z, numVerticesPerSize))
 								increment = -increment;
 						}
 						else
@@ -2172,14 +2314,14 @@ namespace TheWorld_Utils
 						uint16_t half = half_from_float(f.u32);
 						data.heights16Buffer->at<uint16_t>(x, z, numVerticesPerSize) = half;
 
-						//float hNorth = northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize);
-						northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize) -= increment;
-						TheWorld_Utils::FLOAT_32 f1(northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize));
+						//float hNorth = northData.heights32Buffer->at<float>(x, maxIndex - z, numVerticesPerSize);
+						northData.heights32Buffer->at<float>(x, maxIndex - z, numVerticesPerSize) -= increment;
+						TheWorld_Utils::FLOAT_32 f1(northData.heights32Buffer->at<float>(x, maxIndex - z, numVerticesPerSize));
 						uint16_t half1 = half_from_float(f1.u32);
-						northData.heights16Buffer->at<uint16_t>(x, numVerticesPerSize - 1 - z, numVerticesPerSize) = half1;
+						northData.heights16Buffer->at<uint16_t>(x, maxIndex - z, numVerticesPerSize) = half1;
 
 						//if (x == 0)
-						//	PLOG_DEBUG << "x=" << std::to_string(x) << " z=" << std::to_string(z) << "/" << std::to_string(numVerticesPerSize - 1 - z) << " increment= " << std::to_string(increment) << " " << std::to_string(h) << " ==> " << std::to_string(data.heights32Buffer->at<float>(x, z, numVerticesPerSize)) << " " << std::to_string(hNorth) << " ==> " << std::to_string(northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize));
+						//	PLOG_DEBUG << "x=" << std::to_string(x) << " z=" << std::to_string(z) << "/" << std::to_string(maxIndex - z) << " increment= " << std::to_string(increment) << " " << std::to_string(h) << " ==> " << std::to_string(data.heights32Buffer->at<float>(x, z, numVerticesPerSize)) << " " << std::to_string(hNorth) << " ==> " << std::to_string(northData.heights32Buffer->at<float>(x, maxIndex - z, numVerticesPerSize));
 
 						// if last phase we need to reconcile vertices on the border of modified quadrants
 						if (x == 0)
@@ -2190,8 +2332,8 @@ namespace TheWorld_Utils
 								{
 									westData.heightsUpdated = true;
 									updated = true;
-									westData.heights32Buffer->at<float>(numVerticesPerSize - 1, z, numVerticesPerSize) = f.f32;
-									westData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1, z, numVerticesPerSize) = half;
+									westData.heights32Buffer->at<float>(maxIndex, z, numVerticesPerSize) = f.f32;
+									westData.heights16Buffer->at<uint16_t>(maxIndex, z, numVerticesPerSize) = half;
 								}
 								else
 								{
@@ -2205,8 +2347,8 @@ namespace TheWorld_Utils
 								{
 									northwestData.heightsUpdated = true;
 									updated = true;
-									northwestData.heights32Buffer->at<float>(numVerticesPerSize - 1, numVerticesPerSize - 1 - z, numVerticesPerSize) = f1.f32;
-									northwestData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1, numVerticesPerSize - 1 - z, numVerticesPerSize) = half1;
+									northwestData.heights32Buffer->at<float>(maxIndex, maxIndex - z, numVerticesPerSize) = f1.f32;
+									northwestData.heights16Buffer->at<uint16_t>(maxIndex, maxIndex - z, numVerticesPerSize) = half1;
 								}
 								else
 								{
@@ -2217,7 +2359,7 @@ namespace TheWorld_Utils
 						}
 
 						// if last phase we need to reconcile vertices on the border of modified quadrants
-						if (x == numVerticesPerSize - 1)
+						if (x == maxIndex)
 						{
 							if (eastData.heights32Buffer != nullptr && eastTerrainEdit != nullptr && !eastTerrainEdit->westSideXMinus.needBlend && !terrainEdit->eastSideXPlus.needBlend)
 							{
@@ -2240,8 +2382,8 @@ namespace TheWorld_Utils
 								{
 									northeastData.heightsUpdated = true;
 									updated = true;
-									northeastData.heights32Buffer->at<float>(0, numVerticesPerSize - 1 - z, numVerticesPerSize) = f1.f32;
-									northeastData.heights16Buffer->at<uint16_t>(0, numVerticesPerSize - 1 - z, numVerticesPerSize) = half1;
+									northeastData.heights32Buffer->at<float>(0, maxIndex - z, numVerticesPerSize) = f1.f32;
+									northeastData.heights16Buffer->at<uint16_t>(0, maxIndex - z, numVerticesPerSize) = half1;
 								}
 								else
 								{
@@ -2303,12 +2445,14 @@ namespace TheWorld_Utils
 		if (southeastData.terrainEditValues != nullptr)
 			southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
 
+		size_t maxIndex = numVerticesPerSize - 1;
+
 		if (southData.heights32Buffer != nullptr && southTerrainEdit != nullptr && (terrainEdit->southSideZPlus.needBlend || southTerrainEdit->northSideZMinus.needBlend))
 		{
 			// moving on south side: every x with z = 0 
 			for (size_t x = 0; x < numVerticesPerSize; x++)
 			{
-				float gapForEachQuandrantOnBorder = abs(data.heights32Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize) - southData.heights32Buffer->at<float>(x, 0, numVerticesPerSize)) / 2;
+				float gapForEachQuandrantOnBorder = abs(data.heights32Buffer->at<float>(x, maxIndex, numVerticesPerSize) - southData.heights32Buffer->at<float>(x, 0, numVerticesPerSize)) / 2;
 				size_t numVerticesToAdjustInEachQuadrant = (size_t)ceilf(gapForEachQuandrantOnBorder / (gridStepInWU / 2));
 				if (numVerticesToAdjustInEachQuadrant > numVerticesPerSize / 2)
 					numVerticesToAdjustInEachQuadrant = numVerticesPerSize / 2;
@@ -2316,7 +2460,7 @@ namespace TheWorld_Utils
 				if (numVerticesToAdjustInEachQuadrant > 0)
 				{
 					float increment = 0.0f;
-					float averageStep = (abs(data.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - (numVerticesToAdjustInEachQuadrant - 1), numVerticesPerSize)
+					float averageStep = (abs(data.heights32Buffer->at<float>(x, maxIndex - (numVerticesToAdjustInEachQuadrant - 1), numVerticesPerSize)
 						- southData.heights32Buffer->at<float>(x, numVerticesToAdjustInEachQuadrant - 1, numVerticesPerSize)) / 2) / numVerticesToAdjustInEachQuadrant;
 
 					data.heightsUpdated = true;
@@ -2325,21 +2469,21 @@ namespace TheWorld_Utils
 
 					for (int z = (int)numVerticesToAdjustInEachQuadrant - 1; z >= 0; z--)
 					{
-						float currentGapInEachQuadrant = abs(data.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize) - southData.heights32Buffer->at<float>(x, z, numVerticesPerSize)) / 2;
+						float currentGapInEachQuadrant = abs(data.heights32Buffer->at<float>(x, maxIndex - z, numVerticesPerSize) - southData.heights32Buffer->at<float>(x, z, numVerticesPerSize)) / 2;
 						float desideredGapInEachQuadrant = abs(averageStep) * z;
 						if (currentGapInEachQuadrant > desideredGapInEachQuadrant)
 						{
 							increment = currentGapInEachQuadrant - desideredGapInEachQuadrant;
-							if (data.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize) > southData.heights32Buffer->at<float>(x, z, numVerticesPerSize))
+							if (data.heights32Buffer->at<float>(x, maxIndex - z, numVerticesPerSize) > southData.heights32Buffer->at<float>(x, z, numVerticesPerSize))
 								increment = -increment;
 						}
 						else
 							increment = 0.0f;
 
-						data.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize) += increment;
-						TheWorld_Utils::FLOAT_32 f(data.heights32Buffer->at<float>(x, numVerticesPerSize - 1 - z, numVerticesPerSize));
+						data.heights32Buffer->at<float>(x, maxIndex - z, numVerticesPerSize) += increment;
+						TheWorld_Utils::FLOAT_32 f(data.heights32Buffer->at<float>(x, maxIndex - z, numVerticesPerSize));
 						uint16_t half = half_from_float(f.u32);
-						data.heights16Buffer->at<uint16_t>(x, numVerticesPerSize - 1 - z, numVerticesPerSize) = half;
+						data.heights16Buffer->at<uint16_t>(x, maxIndex - z, numVerticesPerSize) = half;
 
 						southData.heights32Buffer->at<float>(x, z, numVerticesPerSize) -= increment;
 						TheWorld_Utils::FLOAT_32 f1(southData.heights32Buffer->at<float>(x, z, numVerticesPerSize));
@@ -2355,8 +2499,8 @@ namespace TheWorld_Utils
 								{
 									westData.heightsUpdated = true;
 									updated = true;
-									westData.heights32Buffer->at<float>(numVerticesPerSize - 1, numVerticesPerSize - 1 - z, numVerticesPerSize) = f.f32;
-									westData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1, numVerticesPerSize - 1 - z, numVerticesPerSize) = half;
+									westData.heights32Buffer->at<float>(maxIndex, maxIndex - z, numVerticesPerSize) = f.f32;
+									westData.heights16Buffer->at<uint16_t>(maxIndex, maxIndex - z, numVerticesPerSize) = half;
 								}
 								else
 								{
@@ -2370,8 +2514,8 @@ namespace TheWorld_Utils
 								{
 									southwestData.heightsUpdated = true;
 									updated = true;
-									southwestData.heights32Buffer->at<float>(numVerticesPerSize - 1, z, numVerticesPerSize) = f1.f32;
-									southwestData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1, z, numVerticesPerSize) = half1;
+									southwestData.heights32Buffer->at<float>(maxIndex, z, numVerticesPerSize) = f1.f32;
+									southwestData.heights16Buffer->at<uint16_t>(maxIndex, z, numVerticesPerSize) = half1;
 								}
 								else
 								{
@@ -2382,7 +2526,7 @@ namespace TheWorld_Utils
 						}
 
 						// if last phase we need to reconcile vertices on the border of modified quadrants
-						if (x == numVerticesPerSize - 1)
+						if (x == maxIndex)
 						{
 							if (eastData.heights32Buffer != nullptr && eastTerrainEdit != nullptr && !eastTerrainEdit->westSideXMinus.needBlend && !terrainEdit->eastSideXPlus.needBlend)
 							{
@@ -2390,8 +2534,8 @@ namespace TheWorld_Utils
 								{
 									eastData.heightsUpdated = true;
 									updated = true;
-									eastData.heights32Buffer->at<float>(0, numVerticesPerSize - 1 - z, numVerticesPerSize) = f.f32;
-									eastData.heights16Buffer->at<uint16_t>(0, numVerticesPerSize - 1 - z, numVerticesPerSize) = half;
+									eastData.heights32Buffer->at<float>(0, maxIndex - z, numVerticesPerSize) = f.f32;
+									eastData.heights16Buffer->at<uint16_t>(0, maxIndex - z, numVerticesPerSize) = half;
 								}
 								else
 								{
@@ -2468,12 +2612,14 @@ namespace TheWorld_Utils
 		//if (southeastData.terrainEditValues != nullptr)
 		//	southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
 
+		size_t maxIndex = numVerticesPerSize - 1;
+
 		if (westData.heights32Buffer != nullptr && westTerrainEdit != nullptr && (terrainEdit->westSideXMinus.needBlend || westTerrainEdit->eastSideXPlus.needBlend))
 		{
 			// moving on west side: every z with x = 0 
 			for (size_t z = 0; z < numVerticesPerSize; z++)
 			{
-				float gapForEachQuandrantOnBorder = abs(data.heights32Buffer->at<float>(0, z, numVerticesPerSize) - westData.heights32Buffer->at<float>(numVerticesPerSize - 1, z, numVerticesPerSize)) / 2;
+				float gapForEachQuandrantOnBorder = abs(data.heights32Buffer->at<float>(0, z, numVerticesPerSize) - westData.heights32Buffer->at<float>(maxIndex, z, numVerticesPerSize)) / 2;
 				size_t numVerticesToAdjustInEachQuadrant = (size_t)ceilf(gapForEachQuandrantOnBorder / (gridStepInWU / 2));
 				if (numVerticesToAdjustInEachQuadrant > numVerticesPerSize / 2)
 					numVerticesToAdjustInEachQuadrant = numVerticesPerSize / 2;
@@ -2482,7 +2628,7 @@ namespace TheWorld_Utils
 				{
 					float increment = 0.0f;
 					float averageStep = (abs(data.heights32Buffer->at<float>(numVerticesToAdjustInEachQuadrant - 1, z, numVerticesPerSize)
-						- westData.heights32Buffer->at<float>(numVerticesPerSize - 1 - (numVerticesToAdjustInEachQuadrant - 1), z, numVerticesPerSize)) / 2) / numVerticesToAdjustInEachQuadrant;
+						- westData.heights32Buffer->at<float>(maxIndex - (numVerticesToAdjustInEachQuadrant - 1), z, numVerticesPerSize)) / 2) / numVerticesToAdjustInEachQuadrant;
 
 					data.heightsUpdated = true;
 					westData.heightsUpdated = true;
@@ -2490,12 +2636,12 @@ namespace TheWorld_Utils
 
 					for (int x = (int)numVerticesToAdjustInEachQuadrant - 1; x >= 0; x--)
 					{
-						float currentGapInEachQuadrant = abs(data.heights32Buffer->at<float>(x, z, numVerticesPerSize) - westData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize)) / 2;
+						float currentGapInEachQuadrant = abs(data.heights32Buffer->at<float>(x, z, numVerticesPerSize) - westData.heights32Buffer->at<float>(maxIndex - x, z, numVerticesPerSize)) / 2;
 						float desideredGapInEachQuadrant = abs(averageStep) * x;
 						if (currentGapInEachQuadrant > desideredGapInEachQuadrant)
 						{
 							increment = currentGapInEachQuadrant - desideredGapInEachQuadrant;
-							if (data.heights32Buffer->at<float>(x, z, numVerticesPerSize) > westData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize))
+							if (data.heights32Buffer->at<float>(x, z, numVerticesPerSize) > westData.heights32Buffer->at<float>(maxIndex - x, z, numVerticesPerSize))
 								increment = -increment;
 						}
 						else
@@ -2506,10 +2652,10 @@ namespace TheWorld_Utils
 						uint16_t half = half_from_float(f.u32);
 						data.heights16Buffer->at<uint16_t>(x, z, numVerticesPerSize) = half;
 
-						westData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize) -= increment;
-						TheWorld_Utils::FLOAT_32 f1(westData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize));
+						westData.heights32Buffer->at<float>(maxIndex - x, z, numVerticesPerSize) -= increment;
+						TheWorld_Utils::FLOAT_32 f1(westData.heights32Buffer->at<float>(maxIndex - x, z, numVerticesPerSize));
 						uint16_t half1 = half_from_float(f1.u32);
-						westData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1 - x, z, numVerticesPerSize) = half1;
+						westData.heights16Buffer->at<uint16_t>(maxIndex - x, z, numVerticesPerSize) = half1;
 
 						// if last phase we need to reconcile vertices on the border of modified quadrants
 						if (z == 0)
@@ -2520,8 +2666,8 @@ namespace TheWorld_Utils
 								{
 									northData.heightsUpdated = true;
 									updated = true;
-									northData.heights32Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize) = f.f32;
-									northData.heights16Buffer->at<uint16_t>(x, numVerticesPerSize - 1, numVerticesPerSize) = half;
+									northData.heights32Buffer->at<float>(x, maxIndex, numVerticesPerSize) = f.f32;
+									northData.heights16Buffer->at<uint16_t>(x, maxIndex, numVerticesPerSize) = half;
 								}
 								else
 								{
@@ -2535,8 +2681,8 @@ namespace TheWorld_Utils
 								{
 									northwestData.heightsUpdated = true;
 									updated = true;
-									northwestData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, numVerticesPerSize - 1, numVerticesPerSize) = f1.f32;
-									northwestData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1 - x, numVerticesPerSize - 1, numVerticesPerSize) = half1;
+									northwestData.heights32Buffer->at<float>(maxIndex - x, maxIndex, numVerticesPerSize) = f1.f32;
+									northwestData.heights16Buffer->at<uint16_t>(maxIndex - x, maxIndex, numVerticesPerSize) = half1;
 								}
 								else
 								{
@@ -2547,7 +2693,7 @@ namespace TheWorld_Utils
 						}
 
 						// if last phase we need to reconcile vertices on the border of modified quadrants
-						if (z == numVerticesPerSize - 1)
+						if (z == maxIndex)
 						{
 							if (southData.heights32Buffer != nullptr && southTerrainEdit != nullptr && !southTerrainEdit->northSideZMinus.needBlend && !terrainEdit->southSideZPlus.needBlend)
 							{
@@ -2570,8 +2716,8 @@ namespace TheWorld_Utils
 								{
 									southwestData.heightsUpdated = true;
 									updated = true;
-									southwestData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, 0, numVerticesPerSize) = f1.f32;
-									southwestData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1 - x, 0, numVerticesPerSize) = half1;
+									southwestData.heights32Buffer->at<float>(maxIndex - x, 0, numVerticesPerSize) = f1.f32;
+									southwestData.heights16Buffer->at<uint16_t>(maxIndex - x, 0, numVerticesPerSize) = half1;
 								}
 								else
 								{
@@ -2633,12 +2779,14 @@ namespace TheWorld_Utils
 		if (southeastData.terrainEditValues != nullptr)
 			southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
 
+		size_t maxIndex = numVerticesPerSize - 1;
+
 		if (eastData.heights32Buffer != nullptr && eastTerrainEdit != nullptr && (terrainEdit->eastSideXPlus.needBlend || eastTerrainEdit->westSideXMinus.needBlend))
 		{
 			// moving on south side: every x with z = 0 
 			for (size_t z = 0; z < numVerticesPerSize; z++)
 			{
-				float gapForEachQuandrantOnBorder = abs(data.heights32Buffer->at<float>(numVerticesPerSize - 1, z, numVerticesPerSize) - eastData.heights32Buffer->at<float>(0, z, numVerticesPerSize)) / 2;
+				float gapForEachQuandrantOnBorder = abs(data.heights32Buffer->at<float>(maxIndex, z, numVerticesPerSize) - eastData.heights32Buffer->at<float>(0, z, numVerticesPerSize)) / 2;
 				size_t numVerticesToAdjustInEachQuadrant = (size_t)ceilf(gapForEachQuandrantOnBorder / (gridStepInWU / 2));
 				if (numVerticesToAdjustInEachQuadrant > numVerticesPerSize / 2)
 					numVerticesToAdjustInEachQuadrant = numVerticesPerSize / 2;
@@ -2646,7 +2794,7 @@ namespace TheWorld_Utils
 				if (numVerticesToAdjustInEachQuadrant > 0)
 				{
 					float increment = 0.0f;
-					float averageStep = (abs(data.heights32Buffer->at<float>(numVerticesPerSize - 1 - (numVerticesToAdjustInEachQuadrant - 1), z, numVerticesPerSize)
+					float averageStep = (abs(data.heights32Buffer->at<float>(maxIndex - (numVerticesToAdjustInEachQuadrant - 1), z, numVerticesPerSize)
 						- eastData.heights32Buffer->at<float>(numVerticesToAdjustInEachQuadrant - 1, z, numVerticesPerSize)) / 2) / numVerticesToAdjustInEachQuadrant;
 
 					data.heightsUpdated = true;
@@ -2655,21 +2803,21 @@ namespace TheWorld_Utils
 
 					for (int x = (int)numVerticesToAdjustInEachQuadrant - 1; x >= 0; x--)
 					{
-						float currentGapInEachQuadrant = abs(data.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize) - eastData.heights32Buffer->at<float>(x, z, numVerticesPerSize)) / 2;
+						float currentGapInEachQuadrant = abs(data.heights32Buffer->at<float>(maxIndex - x, z, numVerticesPerSize) - eastData.heights32Buffer->at<float>(x, z, numVerticesPerSize)) / 2;
 						float desideredGapInEachQuadrant = abs(averageStep) * x;
 						if (currentGapInEachQuadrant > desideredGapInEachQuadrant)
 						{
 							increment = currentGapInEachQuadrant - desideredGapInEachQuadrant;
-							if (data.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize) > eastData.heights32Buffer->at<float>(x, z, numVerticesPerSize))
+							if (data.heights32Buffer->at<float>(maxIndex - x, z, numVerticesPerSize) > eastData.heights32Buffer->at<float>(x, z, numVerticesPerSize))
 								increment = -increment;
 						}
 						else
 							increment = 0.0f;
 
-						data.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize) += increment;
-						TheWorld_Utils::FLOAT_32 f(data.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, z, numVerticesPerSize));
+						data.heights32Buffer->at<float>(maxIndex - x, z, numVerticesPerSize) += increment;
+						TheWorld_Utils::FLOAT_32 f(data.heights32Buffer->at<float>(maxIndex - x, z, numVerticesPerSize));
 						uint16_t half = half_from_float(f.u32);
-						data.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1 - x, z, numVerticesPerSize) = half;
+						data.heights16Buffer->at<uint16_t>(maxIndex - x, z, numVerticesPerSize) = half;
 
 						eastData.heights32Buffer->at<float>(x, z, numVerticesPerSize) -= increment;
 						TheWorld_Utils::FLOAT_32 f1(eastData.heights32Buffer->at<float>(x, z, numVerticesPerSize));
@@ -2685,8 +2833,8 @@ namespace TheWorld_Utils
 								{
 									northData.heightsUpdated = true;
 									updated = true;
-									northData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, numVerticesPerSize - 1, numVerticesPerSize) = f.f32;
-									northData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1 - x, numVerticesPerSize - 1, numVerticesPerSize) = half;
+									northData.heights32Buffer->at<float>(maxIndex - x, maxIndex, numVerticesPerSize) = f.f32;
+									northData.heights16Buffer->at<uint16_t>(maxIndex - x, maxIndex, numVerticesPerSize) = half;
 								}
 								else
 								{
@@ -2700,8 +2848,8 @@ namespace TheWorld_Utils
 								{
 									northeastData.heightsUpdated = true;
 									updated = true;
-									northeastData.heights32Buffer->at<float>(x, numVerticesPerSize - 1, numVerticesPerSize) = f1.f32;
-									northeastData.heights16Buffer->at<uint16_t>(x, numVerticesPerSize - 1, numVerticesPerSize) = half1;
+									northeastData.heights32Buffer->at<float>(x, maxIndex, numVerticesPerSize) = f1.f32;
+									northeastData.heights16Buffer->at<uint16_t>(x, maxIndex, numVerticesPerSize) = half1;
 								}
 								else
 								{
@@ -2712,7 +2860,7 @@ namespace TheWorld_Utils
 						}
 
 						// if last phase we need to reconcile vertices on the border of modified quadrants
-						if (z == numVerticesPerSize - 1)
+						if (z == maxIndex)
 						{
 							if (southData.heights32Buffer != nullptr && southTerrainEdit != nullptr && !southTerrainEdit->northSideZMinus.needBlend && !terrainEdit->southSideZPlus.needBlend)
 							{
@@ -2720,8 +2868,8 @@ namespace TheWorld_Utils
 								{
 									southData.heightsUpdated = true;
 									updated = true;
-									southData.heights32Buffer->at<float>(numVerticesPerSize - 1 - x, 0, numVerticesPerSize) = f.f32;
-									southData.heights16Buffer->at<uint16_t>(numVerticesPerSize - 1 - x, 0, numVerticesPerSize) = half;
+									southData.heights32Buffer->at<float>(maxIndex - x, 0, numVerticesPerSize) = f.f32;
+									southData.heights16Buffer->at<uint16_t>(maxIndex - x, 0, numVerticesPerSize) = half;
 								}
 								else
 								{
