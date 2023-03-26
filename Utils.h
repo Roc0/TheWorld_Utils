@@ -95,6 +95,14 @@ namespace TheWorld_Utils
 		BYTE b;
 	};
 
+	struct _RGBA
+	{
+		BYTE r;
+		BYTE g;
+		BYTE b;
+		BYTE a;
+	};
+
 	static constexpr float kPi = 3.14159265358979323846f;
 	static constexpr float kPi2 = 6.28318530717958647692f;
 	static constexpr float kEpsilon = 0.0001f;
@@ -192,7 +200,12 @@ namespace TheWorld_Utils
 
 	class TerrainEdit
 	{
+		class MeshCacheBuffer;
+
 	public:
+		__declspec(dllexport) static void generateGroundImage(std::string outdir, std::string groundTypeName, size_t imageSize, MemoryBuffer& colorImage, MemoryBuffer& bumpImage, MemoryBuffer& normalImage, MemoryBuffer& roughImage);
+		__declspec(dllexport) static void generateGroundImage(MemoryBuffer& albedoBumpImage, MemoryBuffer& normalRoughnessImage, std::string groundTypeName, size_t imageSize, MemoryBuffer& colorImage, MemoryBuffer& bumpImage, MemoryBuffer& normalImage, MemoryBuffer& roughImage);
+
 		enum class TerrainType
 		{
 			unknown = 0

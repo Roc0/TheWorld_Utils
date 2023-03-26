@@ -28,6 +28,156 @@ namespace fs = std::filesystem;
 
 namespace TheWorld_Utils
 {
+	void TerrainEdit::generateGroundImage(MemoryBuffer& albedoBumpImage, MemoryBuffer& normalRoughnessImage, std::string groundTypeName, size_t imageSize, MemoryBuffer& colorImage, MemoryBuffer& bumpImage, MemoryBuffer& normalImage, MemoryBuffer& roughImage)
+	{
+		size_t width, heigth;
+		double d;
+
+		// Color image formal controls
+		d = sqrt(colorImage.size() / sizeof(struct TheWorld_Utils::_RGB));
+		if (colorImage.size() == 0)
+			throw(std::exception((std::string(__FUNCTION__) + std::string("Color image empty")).c_str()));
+		if (d * d * sizeof(struct TheWorld_Utils::_RGB) != colorImage.size())
+			throw(std::exception((std::string(__FUNCTION__) + std::string("Color image length not valid")).c_str()));
+		width = heigth = (size_t)d;
+
+		// Bump image formal controls
+		if (bumpImage.size() > 0)
+		{
+			d = sqrt(bumpImage.size());
+			if (d * d != bumpImage.size())
+				throw(std::exception((std::string(__FUNCTION__) + std::string("Normal image length not valid")).c_str()));
+			if ((size_t)d != width)
+				throw(std::exception((std::string(__FUNCTION__) + std::string("Normal image differs from color image size")).c_str()));
+		}
+
+		// Normal image formal controls
+		if (normalImage.size() > 0)
+		{
+			d = sqrt(normalImage.size() / sizeof(struct TheWorld_Utils::_RGB));
+			if (d * d * sizeof(struct TheWorld_Utils::_RGB) != normalImage.size())
+				throw(std::exception((std::string(__FUNCTION__) + std::string("Normal image length not valid")).c_str()));
+			if ((size_t)d != width)
+				throw(std::exception((std::string(__FUNCTION__) + std::string("Normal image differs from color image size")).c_str()));
+		}
+
+		// Rough image formal controls
+		if (roughImage.size() > 0)
+		{
+			d = sqrt(roughImage.size());
+			if (d * d != roughImage.size())
+				throw(std::exception((std::string(__FUNCTION__) + std::string("Rough image length not valid")).c_str()));
+			if ((size_t)d != width)
+				throw(std::exception((std::string(__FUNCTION__) + std::string("Rough image differs from color image size")).c_str()));
+		}
+
+		size_t bufferSize = width * heigth * sizeof(struct TheWorld_Utils::_RGBA);
+
+		albedoBumpImage.clear();
+		albedoBumpImage.reserve(bufferSize);
+		albedoBumpImage.adjustSize(bufferSize);
+		struct TheWorld_Utils::_RGBA* rgba = (struct TheWorld_Utils::_RGBA*)albedoBumpImage.ptr();
+		struct TheWorld_Utils::_RGB* rgb = (struct TheWorld_Utils::_RGB*)colorImage.ptr();
+		BYTE* a = bumpImage.size() > 0 ? bumpImage.ptr() : nullptr;
+		for (size_t row = 0; row < heigth; row++)
+			for (size_t col = 0; col < width; col++)
+			{
+				rgba->r = rgb->r;
+				rgba->g = rgb->g;
+				rgba->b = rgb->b;
+
+				if (a != nullptr)
+				{
+					rgba->a = *a;
+					a++;
+				}
+				else
+					rgba->a = 255;
+
+				rgba++;
+				rgb++;
+			}
+
+		normalRoughnessImage.clear();
+		if (normalImage.size() > 0 || roughImage.size() > 0)
+		{
+			normalRoughnessImage.reserve(bufferSize);
+			normalRoughnessImage.adjustSize(bufferSize);
+			struct TheWorld_Utils::_RGBA* rgba = (struct TheWorld_Utils::_RGBA*)normalRoughnessImage.ptr();
+			struct TheWorld_Utils::_RGB* rgb = normalImage.size() > 0 ? (struct TheWorld_Utils::_RGB*)normalImage.ptr() : nullptr;
+			BYTE* a = roughImage.size() > 0 ? roughImage.ptr() : nullptr;
+			for (size_t row = 0; row < heigth; row++)
+				for (size_t col = 0; col < width; col++)
+				{
+					if (rgb != nullptr)
+					{
+						rgba->r = rgb->r;
+						rgba->g = rgb->g;
+						rgba->b = rgb->b;
+						rgb++;
+					}
+					else
+					{
+						rgba->r = 127;
+						rgba->g = 127;
+						rgba->b = 255;
+					}
+
+					if (a != nullptr)
+					{
+						rgba->a = *a;
+						a++;
+					}
+					else
+						rgba->a = 255;
+
+					rgba++;
+				}
+		}
+	}
+
+	void TerrainEdit::generateGroundImage(std::string outdir, std::string groundTypeName, size_t imageSize, MemoryBuffer& colorImage, MemoryBuffer& bumpImage, MemoryBuffer& normalImage, MemoryBuffer& roughImage)
+	{
+		MemoryBuffer albedoBumpImage;
+		MemoryBuffer normalRoughnessImage;
+
+		generateGroundImage(albedoBumpImage, normalRoughnessImage, groundTypeName, imageSize, colorImage, bumpImage, normalImage, roughImage);
+
+		if (outdir.substr(outdir.size() - 1, 1) != "\\")
+			outdir += "\\";
+		FILE* outFile = nullptr;
+
+		std::string albedoBumpImagePath = outdir + groundTypeName + "_albedo_bump.ground";
+		errno_t err = fopen_s(&outFile, albedoBumpImagePath.c_str(), "wb");
+		if (err != 0)
+		{
+			throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Open ") + albedoBumpImagePath.c_str() + " in errore - Err=" + std::to_string(err)).c_str()));
+		}
+
+		if (fwrite(albedoBumpImage.ptr(), albedoBumpImage.size(), 1, outFile) != 1)
+		{
+			fclose(outFile);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Error writing ") + albedoBumpImagePath.c_str()).c_str()));
+		}
+
+		fclose(outFile);
+
+		std::string normalRoughnessImagePath = outdir + groundTypeName + "_normal_roughness.ground";
+		err = fopen_s(&outFile, normalRoughnessImagePath.c_str(), "wb");
+		if (err != 0)
+		{
+			throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Open ") + normalRoughnessImagePath.c_str() + " in errore - Err=" + std::to_string(err)).c_str()));
+		}
+
+		if (fwrite(normalRoughnessImage.ptr(), normalRoughnessImage.size(), 1, outFile) != 1)
+		{
+			fclose(outFile);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Error writing ") + normalRoughnessImagePath.c_str()).c_str()));
+		}
+
+		fclose(outFile);
+	}
+
 	TerrainEdit::TerrainEdit(enum class TerrainEdit::TerrainType terrainType)
 	{
 		size = sizeof(TerrainEdit);
