@@ -83,10 +83,7 @@ namespace TheWorld_Utils
 			for (size_t col = 0; col < width; col++)
 			{
 				rgba->r = rgb->r;
-				if (flipY)
-					rgba->g = 255 - rgb->g;
-				else
-					rgba->g = rgb->g;
+				rgba->g = rgb->g;
 				rgba->b = rgb->b;
 
 				if (a != nullptr)
@@ -115,7 +112,10 @@ namespace TheWorld_Utils
 					if (rgb != nullptr)
 					{
 						rgba->r = rgb->r;
-						rgba->g = rgb->g;
+						if (flipY)
+							rgba->g = 255 - rgb->g;
+						else
+							rgba->g = rgb->g;
 						rgba->b = rgb->b;
 						rgb++;
 					}
