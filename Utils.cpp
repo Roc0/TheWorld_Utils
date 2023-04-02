@@ -28,7 +28,7 @@ namespace fs = std::filesystem;
 
 namespace TheWorld_Utils
 {
-	void TerrainEdit::generateGroundImage(MemoryBuffer& albedoBumpImage, MemoryBuffer& normalRoughnessImage, std::string groundTypeName, size_t imageSize, MemoryBuffer& colorImage, MemoryBuffer& bumpImage, MemoryBuffer& normalImage, MemoryBuffer& roughImage)
+	void TerrainEdit::generateGroundImage(MemoryBuffer& albedoBumpImage, MemoryBuffer& normalRoughnessImage, std::string groundTypeName, size_t imageSize, bool flipY, MemoryBuffer& colorImage, MemoryBuffer& bumpImage, MemoryBuffer& normalImage, MemoryBuffer& roughImage)
 	{
 		size_t width, heigth;
 		double d;
@@ -83,7 +83,10 @@ namespace TheWorld_Utils
 			for (size_t col = 0; col < width; col++)
 			{
 				rgba->r = rgb->r;
-				rgba->g = rgb->g;
+				if (flipY)
+					rgba->g = 255 - rgb->g;
+				else
+					rgba->g = rgb->g;
 				rgba->b = rgb->b;
 
 				if (a != nullptr)
@@ -136,12 +139,12 @@ namespace TheWorld_Utils
 		}
 	}
 
-	void TerrainEdit::generateGroundImage(std::string outdir, std::string groundTypeName, size_t imageSize, MemoryBuffer& colorImage, MemoryBuffer& bumpImage, MemoryBuffer& normalImage, MemoryBuffer& roughImage)
+	void TerrainEdit::generateGroundImage(std::string outdir, std::string groundTypeName, size_t imageSize, bool flipY, MemoryBuffer& colorImage, MemoryBuffer& bumpImage, MemoryBuffer& normalImage, MemoryBuffer& roughImage)
 	{
 		MemoryBuffer albedoBumpImage;
 		MemoryBuffer normalRoughnessImage;
 
-		generateGroundImage(albedoBumpImage, normalRoughnessImage, groundTypeName, imageSize, colorImage, bumpImage, normalImage, roughImage);
+		generateGroundImage(albedoBumpImage, normalRoughnessImage, groundTypeName, imageSize, flipY, colorImage, bumpImage, normalImage, roughImage);
 
 		if (outdir.substr(outdir.size() - 1, 1) != "\\")
 			outdir += "\\";
