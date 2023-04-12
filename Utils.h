@@ -141,6 +141,12 @@ namespace TheWorld_Utils
 			ptr += ((y * size) + x);
 			return *ptr;
 		}
+		template <typename T> __declspec(dllexport) T* at_ptr(size_t x, size_t y, size_t size)
+		{
+			T* ptr = (T*)m_ptr;
+			ptr += ((y * size) + x);
+			return ptr;
+		}
 		template <typename T> __declspec(dllexport) void populateVector(std::vector<T>& v)
 		{
 			size_t numElements = size() / sizeof(T);

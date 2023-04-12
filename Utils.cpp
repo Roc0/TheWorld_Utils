@@ -1671,8 +1671,8 @@ namespace TheWorld_Utils
 				//rgba.a = BYTE(rocksAmount * 255);
 
 				float h = float32HeigthsBuffer.at<float>(x, z, numVerticesPerSize);
-				struct TheWorld_Utils::_RGB rgb = normalsBuffer.at<TheWorld_Utils::_RGB>(x, z, numVerticesPerSize);
-				Eigen::Vector3d packedNormal((const double)(double(rgb.r) / 255), (const double)(double(rgb.g) / 255), (const double)(double(rgb.b) / 255));
+				struct TheWorld_Utils::_RGB rgbNormal = normalsBuffer.at<TheWorld_Utils::_RGB>(x, z, numVerticesPerSize);
+				Eigen::Vector3d packedNormal((const double)(double(rgbNormal.r) / 255), (const double)(double(rgbNormal.g) / 255), (const double)(double(rgbNormal.b) / 255));
 						//float nx = (float)packedNormal.x();
 						//float ny = (float)packedNormal.y();
 						//float nz = (float)packedNormal.z();
@@ -1685,55 +1685,42 @@ namespace TheWorld_Utils
 						//ny = (float)normal.y();
 						//nz = (float)normal.z();
 				Eigen::Vector3d up(0.0f, 1.0f, 0.0f);
-				//float slope = 4.0f * (1.0f - float(normal.dot(up))) - 2.0f;
-				float slope = 4.0f * float(normal.dot(up)) - 2.0f;	// slope 2 ==> -2 : 2 min slope (flat terrain), -2 max slope (vertical terrain)
+				
+				float dot = float(normal.dot(up));
+				float slope = 4.0f * (1.0f - dot) - 1.0f;
+				//float slope = 4.0f * (1.0f - float(normal.dot(up))) - 1.0f;	// slope -1 / 3, -1=flat terrain, 3=vertical terrain
 						//float f = float(normal.dot(up));
 
 				// amaounts range from 0.0f to 1.0f
 				float rocksAmount = TheWorld_Utils::Utils::clamp<float>(slope, 0.0f, 1.0f);
-				float dirtAmount = TheWorld_Utils::Utils::clamp<float>(1.0f - slope, 0.0f, 1.0f);
-				float lowElevationAmount, highElevationAmount;
-				if (diffAltitude == 0.0f)
-				{
-					lowElevationAmount = 1.0f;
-					highElevationAmount = 0.0f;
-				}
-				else
-				{
-					float f = (3.0f * h) / diffAltitude;	// altitude transformed from 0.0f to 3.0f: from 0.0f to 1.0 all amount to lowAltitude, from 2.0f to 3.0f all amount to highAltitude else interpolated
-					highElevationAmount = TheWorld_Utils::Utils::clamp<float>(f, 1.0f, 2.0f) - 1.0f;	// range from 0 to 1: 0 all low, 1 all high
-					lowElevationAmount = 1.0f - highElevationAmount;
-					//if (highElevationAmount == 1.0f)
-					//	highElevationAmount = 1.0f;
-					//else if (highElevationAmount == 0.0f)
-					//	highElevationAmount = 0.0f;
-					//else
-					//	highElevationAmount = 1.0f - lowElevationAmount;
-				}
+				float dirtAmount = TheWorld_Utils::Utils::clamp<float>(rocksAmount * 2, 0.0f, 1.0f);
+				float highElevationAmount = 4.0f * ((h - terrainEdit->minHeight) / diffAltitude) - 2.0f;		// -2 / 2: -2=min_height, 2=at max_height
+				highElevationAmount = TheWorld_Utils::Utils::clamp<float>(highElevationAmount, 0.0f, 1.0f);		// capped from 0 and 1 (-2 / 0 = 0, 1 / 2 = 1)
+				float lowElevationAmount = 1.0f - highElevationAmount;
 
-				struct TheWorld_Utils::_RGBA rgba = splatmapBuffer.at<TheWorld_Utils::_RGBA>(x, z, numVerticesPerSize);
+				if (rocksAmount == 0.0f)
+					rocksAmount = 0.0f;
+
+				struct TheWorld_Utils::_RGBA* rgba = splatmapBuffer.at_ptr<TheWorld_Utils::_RGBA>(x, z, numVerticesPerSize);
 
 				float r = lowElevationAmount;
-				//r = std::lerp(r, 0.0f, highElevationAmount);
-				//r = std::lerp(r, 0.0f, dirtAmount);
-				//r = std::lerp(r, 0.0f, rocksAmount);
-
+				r = std::lerp(r, 0.0f, highElevationAmount);	// with higher priority: if highElevationAmount=0 r is unchanged, if highElevationAmount==>1 r==>0 (highElevationAmount can lower lowElevationAmount)
+				r = std::lerp(r, 0.0f, dirtAmount);				// with higher priority: if dirtAmount=0 r is unchanged, if dirtAmount==>1 r==>0 (dirtAmount can lower lowElevationAmount)
+				r = std::lerp(r, 0.0f, rocksAmount);			// with higher priority: if rocksAmount=0 r is unchanged, if rocksAmount==>1 r==>0 (rocksAmount can lower lowElevationAmount)
+					
 				float g = highElevationAmount;
-				//float g = std::lerp(0.0f, 1.0f, highElevationAmount);
-				//g = std::lerp(g, 0.0f, dirtAmount);
-				//g = std::lerp(g, 0.0f, rocksAmount);
+				g = std::lerp(g, 0.0f, dirtAmount);				// with higher priority: if dirtAmount=0 g is unchanged, if dirtAmount==>1 g==>0 (dirtAmount can lower highElevationAmount)
+				g = std::lerp(g, 0.0f, rocksAmount);			// with higher priority: if rocksAmount=0 g is unchanged, if rocksAmount==>1 g==>0 (rocksAmount can lower highElevationAmount)
 
 				float b = dirtAmount;
-				//float b = std::lerp(0.0f, 1.0f, dirtAmount);
-				//b = std::lerp(b, 0.0f, rocksAmount);
+				b = std::lerp(b, 0.0f, rocksAmount);			// with higher priority: if rocksAmount=0 b is unchanged, if rocksAmount==>1 b==>0 (rocksAmount can lower dirtAmount)
 
 				float a = rocksAmount;
-				//float a = std::lerp(0.0f, 1.0f, rocksAmount);
 
-				rgba.r = BYTE(r * 255);
-				rgba.g = BYTE(g * 255);
-				rgba.b = BYTE(b * 255);
-				rgba.a = BYTE(a * 255);
+				rgba->r = BYTE(r * 255);
+				rgba->g = BYTE(g * 255);
+				rgba->b = BYTE(b * 255);
+				rgba->a = BYTE(a * 255);
 			}
 	}
 
@@ -3484,7 +3471,9 @@ namespace TheWorld_Utils
 
 	Eigen::Vector3d unpackNormal(Eigen::Vector3d packedNormal)
 	{
-		Eigen::Vector3d temp = (2 * packedNormal) - Eigen::Vector3d(1, 1, 1);
-		return Eigen::Vector3d(temp.x(), temp.z(), temp.y());
+		Eigen::Vector3d temp(packedNormal.x(), packedNormal.z(), packedNormal.y());
+		return (2 * temp) - Eigen::Vector3d(1, 1, 1);
+		//Eigen::Vector3d temp = (2 * packedNormal) - Eigen::Vector3d(1, 1, 1);
+		//return Eigen::Vector3d(temp.x(), temp.z(), temp.y());
 	}
 }
