@@ -25,6 +25,7 @@
 #include <exception>
 #include <plog/Log.h>
 #include "gsl\assert"
+#include <Eigen/Dense>
 
 #define Vector3Zero Vector3(0, 0, 0)
 #define Vector3UP Vector3(0, 1, 0)
@@ -206,6 +207,14 @@ namespace TheWorld_Utils
 		__declspec(dllexport) static void generateGroundImage(std::string outdir, std::string groundTypeName, size_t imageSize, bool flipY, MemoryBuffer& colorImage, MemoryBuffer& bumpImage, MemoryBuffer& normalImage, MemoryBuffer& roughImage);
 		__declspec(dllexport) static void generateGroundImage(MemoryBuffer& albedoBumpImage, MemoryBuffer& normalRoughnessImage, std::string groundTypeName, size_t imageSize, bool flipY, MemoryBuffer& colorImage, MemoryBuffer& bumpImage, MemoryBuffer& normalImage, MemoryBuffer& roughImage);
 
+		enum class TextureType
+		{
+			lowElevation = 0
+			, highElevation = 1
+			, dirt = 2
+			, rocks = 3
+		};
+		 
 		enum class TerrainType
 		{
 			unknown = 0
@@ -223,6 +232,8 @@ namespace TheWorld_Utils
 			, noise_1 = 12
 		};
 
+		__declspec(dllexport) static std::string getTextureNameForTerrainType(enum class TerrainType terrainType, enum class TextureType textureType);
+
 		size_t size;
 		bool needUploadToServer;
 		bool normalsNeedRegen;
@@ -238,7 +249,19 @@ namespace TheWorld_Utils
 
 		NoiseValues noise;
 
+		struct
+		{
+			char lowElevationTexName_r[51];
+			char highElevationTexName_g[51];
+			char dirtTexName_b[51];
+			char rocksTexName_a[51];
+			bool texturesNeedRegen;
+			bool emptyColormap;
+			bool emptyGlobalmap;
+		} extraValues;
+
 		__declspec(dllexport) TerrainEdit(enum class TerrainEdit::TerrainType terrainType = TerrainEdit::TerrainType::campaign_1);
+		__declspec(dllexport) void setTextureNameForTerrainType(enum class TerrainEdit::TextureType textureType);
 		__declspec(dllexport) void init(enum class TerrainEdit::TerrainType terrainType);
 		__declspec(dllexport) void serialize(TheWorld_Utils::MemoryBuffer& buffer);
 		__declspec(dllexport) void deserialize(TheWorld_Utils::MemoryBuffer& buffer);
@@ -373,8 +396,12 @@ namespace TheWorld_Utils
 			TheWorld_Utils::MemoryBuffer* heights16Buffer = nullptr;
 			TheWorld_Utils::MemoryBuffer* heights32Buffer = nullptr;
 			TheWorld_Utils::MemoryBuffer* normalsBuffer = nullptr;
+			TheWorld_Utils::MemoryBuffer* splatmapBuffer = nullptr;
+			TheWorld_Utils::MemoryBuffer* colormapBuffer = nullptr;
+			TheWorld_Utils::MemoryBuffer* globalmapBuffer = nullptr;
 			bool heightsUpdated = false;
 			bool normalsUpdated = false;
+			bool texturesUpdated = false;
 		};
 
 	public:
@@ -400,10 +427,10 @@ namespace TheWorld_Utils
 		__declspec(dllexport) static std::string generateNewMeshId(void);
 		__declspec(dllexport) static bool firstMeshIdMoreRecent(std::string firstMeshId, std::string secondMeshId);
 		__declspec(dllexport) std::string getMeshIdFromCache(void);
-		__declspec(dllexport) bool refreshMapsFromCache(size_t numVerticesPerSize, float gridStepInWU, std::string meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer);
-		__declspec(dllexport) void refreshMapsFromBuffer(const BYTE* buffer, const size_t bufferSize, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache);
-		__declspec(dllexport) void refreshMapsFromBuffer(TheWorld_Utils::MemoryBuffer& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache);
-		__declspec(dllexport) void refreshMapsFromBuffer(std::string& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool updateCache);
+		__declspec(dllexport) bool refreshMapsFromCache(size_t numVerticesPerSize, float gridStepInWU, std::string meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer, TheWorld_Utils::MemoryBuffer& colormapBuffer, TheWorld_Utils::MemoryBuffer& globalmapBuffer);
+		__declspec(dllexport) void refreshMapsFromBuffer(const BYTE* buffer, const size_t bufferSize, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer, TheWorld_Utils::MemoryBuffer& colormapBuffer, TheWorld_Utils::MemoryBuffer& globalmapBuffer, bool updateCache);
+		__declspec(dllexport) void refreshMapsFromBuffer(TheWorld_Utils::MemoryBuffer& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer, TheWorld_Utils::MemoryBuffer& colormapBuffer, TheWorld_Utils::MemoryBuffer& globalmapBuffer, bool updateCache);
+		__declspec(dllexport) void refreshMapsFromBuffer(std::string& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer, TheWorld_Utils::MemoryBuffer& colormapBuffer, TheWorld_Utils::MemoryBuffer& globalmapBuffer, bool updateCache);
 		__declspec(dllexport) void readBufferFromCache(std::string meshId, TheWorld_Utils::MemoryBuffer& buffer);
 		__declspec(dllexport) void readBufferFromCache(std::string meshId, std::string& buffer);
 		__declspec(dllexport) void writeBufferToCache(std::string& buffer, bool renewMeshId = false);
@@ -416,6 +443,7 @@ namespace TheWorld_Utils
 		__declspec(dllexport) void generateHeightsWithNoise(size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, TerrainEdit* terrainEdit, std::vector<float>& vectGridHeights);
 		__declspec(dllexport) void applyWorldModifier(int level, size_t numVerticesPerSize, float gridStepInWU, float lowerXGridVertex, float lowerZGridVertex, TerrainEdit* terrainEdit, std::vector<float>& vectGridHeights, WorldModifier& wm);
 		__declspec(dllexport) void generateNormalsForBlendedQuadrants(size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer);
+		__declspec(dllexport) void setSplatmap(size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::TerrainEdit* terrainEdit, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer);
 		__declspec(dllexport) void deprecated_generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, TheWorld_Utils::MemoryBuffer& normalsBuffer);
 		__declspec(dllexport) void deprecated_generateNormals(size_t numVerticesPerSize, float gridStepInWU, std::vector<float>& vectGridHeights, BYTE* normalsBuffer, const size_t normalsBufferSize, size_t& usedBufferSize);
 		__declspec(dllexport) void calcMinMxHeight(size_t numVerticesPerSize, TheWorld_Utils::TerrainEdit* terrainEdit, TheWorld_Utils::MemoryBuffer& heights32Buffer);
@@ -535,6 +563,14 @@ namespace TheWorld_Utils
 				return true;
 
 			return false;
+		}
+
+		static bool isEqualVectorWithLimitedPrecision(Eigen::Vector3d v1, Eigen::Vector3d v2, int precision)
+		{
+			if (isEqualWithLimitedPrecision((float)v1.x(), (float)v2.x(), precision) && isEqualWithLimitedPrecision((float)v1.y(), (float)v2.y(), precision) && isEqualWithLimitedPrecision((float)v1.z(), (float)v2.z(), precision))
+				return true;
+			else
+				return false;
 		}
 
 		static int align(int x, int a)
@@ -809,14 +845,6 @@ namespace TheWorld_Utils
 		sprintf(str, "%.6f", num);
 		sscanf(str, "%f", &num);
 		return num;
-	}*/
-
-	/*static bool isEqualVectorWithLimitedPrecision(godot::Vector3 v1, godot::Vector3 v2, int precision)
-	{
-		if (isEqualWithLimitedPrecision(v1.x, v2.x, precision) && isEqualWithLimitedPrecision(v1.y, v2.y, precision) && isEqualWithLimitedPrecision(v1.z, v2.z, precision))
-			return true;
-		else
-			return false;
 	}*/
 
 	static bool equal(const float f0, const float f1, const float epsilon = 0.00001)

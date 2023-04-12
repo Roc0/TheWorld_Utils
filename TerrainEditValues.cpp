@@ -5,8 +5,75 @@
 
 namespace TheWorld_Utils
 {
+	std::string TerrainEdit::getTextureNameForTerrainType(enum class TerrainEdit::TerrainType terrainType, enum class TerrainEdit::TextureType textureType)
+	{
+		std::string ret = "";
+
+		switch (terrainType)
+		{
+		case TerrainType::campaign_1:
+			if (textureType == TerrainEdit::TextureType::lowElevation)
+				ret = "sand";
+				//ret = "Rock028_1K";
+			else if (textureType == TerrainEdit::TextureType::highElevation)
+				ret = "grass";
+			else if (textureType == TerrainEdit::TextureType::dirt)
+				ret = "leaves";
+			else if (textureType == TerrainEdit::TextureType::rocks)
+				ret = "rocks07";
+			break;
+		case TerrainType::high_mountains_1:
+		case TerrainType::high_mountains_1_grow:
+		case TerrainType::high_mountains_2:
+		case TerrainType::high_mountains_2_grow:
+			if (textureType == TerrainEdit::TextureType::lowElevation)
+				ret = "Ground003_2K";
+			else if (textureType == TerrainEdit::TextureType::highElevation)
+				ret = "PaintedPlaster017_1K";
+			else if (textureType == TerrainEdit::TextureType::dirt)
+				ret = "Ground049C_1K";
+			else if (textureType == TerrainEdit::TextureType::rocks)
+				ret = "rocks07";
+			break;
+		default:
+			if (textureType == TerrainEdit::TextureType::lowElevation)
+				ret = "Ground003_2K";
+			else if (textureType == TerrainEdit::TextureType::highElevation)
+				ret = "Ground003_2K";
+			else if (textureType == TerrainEdit::TextureType::dirt)
+				ret = "leaves";
+			else if (textureType == TerrainEdit::TextureType::rocks)
+				ret = "rocks07";
+			break;
+		}
+
+		return ret;
+	}
+
+	void TerrainEdit::setTextureNameForTerrainType(enum class TerrainEdit::TextureType textureType)
+	{
+		std::string texName = getTextureNameForTerrainType(terrainType, textureType);
+		if (textureType == TerrainEdit::TextureType::lowElevation)
+			strcpy_s(extraValues.lowElevationTexName_r, sizeof(extraValues.lowElevationTexName_r), texName.c_str());
+		else if (textureType == TerrainEdit::TextureType::highElevation)
+			strcpy_s(extraValues.highElevationTexName_g, sizeof(extraValues.highElevationTexName_g), texName.c_str());
+		else if (textureType == TerrainEdit::TextureType::dirt)
+			strcpy_s(extraValues.dirtTexName_b, sizeof(extraValues.dirtTexName_b), texName.c_str());
+		else if (textureType == TerrainEdit::TextureType::rocks)
+			strcpy_s(extraValues.rocksTexName_a, sizeof(extraValues.rocksTexName_a), texName.c_str());
+	}
+
 	void TerrainEdit::init(enum class TerrainEdit::TerrainType terrainType)
 	{
+		std::string s = getTextureNameForTerrainType(terrainType, TerrainEdit::TextureType::lowElevation);
+		strcpy_s(extraValues.lowElevationTexName_r, sizeof(extraValues.lowElevationTexName_r), s.c_str());
+		s = getTextureNameForTerrainType(terrainType, TerrainEdit::TextureType::highElevation);
+		strcpy_s(extraValues.highElevationTexName_g, sizeof(extraValues.highElevationTexName_g), s.c_str());
+		s = getTextureNameForTerrainType(terrainType, TerrainEdit::TextureType::dirt);
+		strcpy_s(extraValues.dirtTexName_b, sizeof(extraValues.dirtTexName_b), s.c_str());
+		s = getTextureNameForTerrainType(terrainType, TerrainEdit::TextureType::rocks);
+		strcpy_s(extraValues.rocksTexName_a, sizeof(extraValues.rocksTexName_a), s.c_str());
+
 		switch (terrainType)
 		{
 		case TerrainEdit::TerrainType::jagged_1:
