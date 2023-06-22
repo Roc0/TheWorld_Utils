@@ -30,7 +30,7 @@
 #define Vector3Zero Vector3(0, 0, 0)
 #define Vector3UP Vector3(0, 1, 0)
 
-#define Vector3X Vector3(1, 0, 1)
+#define Vector3X Vector3(1, 0, 0)
 #define Vector3Y Vector3(0, 1, 0)
 #define Vector3Z Vector3(0, 0, 1)
 
