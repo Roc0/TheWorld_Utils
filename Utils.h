@@ -425,7 +425,7 @@ namespace TheWorld_Utils
 
 		__declspec(dllexport) MeshCacheBuffer(void);
 		__declspec(dllexport) ~MeshCacheBuffer(void);
-		__declspec(dllexport) MeshCacheBuffer(std::string cacheDir, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex);
+		__declspec(dllexport) MeshCacheBuffer(std::string cacheDir, std::string mapName, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex);
 		__declspec(dllexport) MeshCacheBuffer(const MeshCacheBuffer& c);
 
 		__declspec(dllexport) void operator=(const MeshCacheBuffer& c);

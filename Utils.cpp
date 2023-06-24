@@ -521,7 +521,7 @@ namespace TheWorld_Utils
 	{
 	}
 		
-	MeshCacheBuffer::MeshCacheBuffer(std::string cacheDir, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex)
+	MeshCacheBuffer::MeshCacheBuffer(std::string cacheDir, std::string mapName, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex)
 	{
 		m_gridStepInWU = gridStepInWU;
 		m_numVerticesPerSize = numVerticesPerSize;
@@ -529,7 +529,7 @@ namespace TheWorld_Utils
 		m_lowerXGridVertex = lowerXGridVertex;
 		m_lowerZGridVertex = lowerZGridVertex;
 
-		m_cacheDir = std::string(cacheDir) + "\\" + "Cache" + "\\" + "ST-" + std::to_string(gridStepInWU) + "_SZ-" + std::to_string(numVerticesPerSize) + "\\L-" + std::to_string(level);
+		m_cacheDir = std::string(cacheDir) + "\\" + "Cache" + "\\" + mapName + "\\" + "ST-" + std::to_string(gridStepInWU) + "_SZ-" + std::to_string(numVerticesPerSize) + "\\L-" + std::to_string(level);
 		if (!fs::exists(m_cacheDir))
 		{
 			fs::create_directories(m_cacheDir);
