@@ -529,7 +529,7 @@ namespace TheWorld_Utils
 		m_lowerXGridVertex = lowerXGridVertex;
 		m_lowerZGridVertex = lowerZGridVertex;
 
-		m_cacheDir = std::string(cacheDir) + "\\" + "Cache" + "\\" + mapName + "\\" + "ST-" + std::to_string(gridStepInWU) + "_SZ-" + std::to_string(numVerticesPerSize) + "\\L-" + std::to_string(level);
+		m_cacheDir = std::string(cacheDir) + "\\" + "Cache\\maps\\" + mapName + "\\" + "ST-" + std::to_string(gridStepInWU) + "_SZ-" + std::to_string(numVerticesPerSize) + "\\L-" + std::to_string(level);
 		if (!fs::exists(m_cacheDir))
 		{
 			fs::create_directories(m_cacheDir);
