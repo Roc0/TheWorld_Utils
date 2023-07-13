@@ -38,6 +38,29 @@ namespace TheWorld_Utils
 {
 	// https://cellperformance.beyond3d.com/articles/2006/07/branchfree_implementation_of_h_1.html
 
+	__declspec(dllexport) Eigen::Vector3d packNormal(Eigen::Vector3d normal);
+	__declspec(dllexport) Eigen::Vector3d unpackNormal(Eigen::Vector3d packedNormal);
+
+	//std::vector<std::string> split(const std::string& s, char seperator)
+	//{
+	//	std::vector<std::string> output;
+
+	//	std::string::size_type prev_pos = 0, pos = 0;
+
+	//	while ((pos = s.find(seperator, pos)) != std::string::npos)
+	//	{
+	//		std::string substring(s.substr(prev_pos, pos - prev_pos));
+
+	//		output.push_back(substring);
+
+	//		prev_pos = ++pos;
+	//	}
+
+	//	output.push_back(s.substr(prev_pos, pos - prev_pos)); // Last word
+
+	//	return output;
+	//}
+
 	class Exception : public std::exception
 	{
 	public:
@@ -430,18 +453,29 @@ namespace TheWorld_Utils
 
 		__declspec(dllexport) void operator=(const MeshCacheBuffer& c);
 
+		__declspec(dllexport) static uint16_t halfFromFloat(uint32_t f);
+		__declspec(dllexport) static uint32_t halfToFloat(uint16_t f);
+
+		static std::string cacheDir(std::string cacheDir, std::string mapName, float gridStepInWU, size_t numVerticesPerSize, int level);
 		__declspec(dllexport) static std::string generateNewMeshId(void);
+		__declspec(dllexport) static std::string generateNewMeshIdForEmptyBuffer(void);
+		__declspec(dllexport) static bool isEmptyBuffer(std::string meshId);
 		__declspec(dllexport) static bool firstMeshIdMoreRecent(std::string firstMeshId, std::string secondMeshId);
-		__declspec(dllexport) std::string getMeshIdFromCache(void);
-		__declspec(dllexport) bool refreshMapsFromCache(size_t numVerticesPerSize, float gridStepInWU, std::string meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer, TheWorld_Utils::MemoryBuffer& colormapBuffer, TheWorld_Utils::MemoryBuffer& globalmapBuffer);
+		__declspec(dllexport) std::string getMeshIdFromDisk(void);
+		__declspec(dllexport) static void getAllDiskCache(std::string cacheDir, std::string mapName, float gridStepInWU, size_t numVerticesPerSize, int level, std::vector<MeshCacheBuffer>& vectDiskCache);
+		__declspec(dllexport) std::string getCacheIdStr(void);
+		__declspec(dllexport) bool refreshMapsFromDisk(size_t numVerticesPerSize, float gridStepInWU, std::string meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer, TheWorld_Utils::MemoryBuffer& colormapBuffer, TheWorld_Utils::MemoryBuffer& globalmapBuffer);
 		__declspec(dllexport) void refreshMapsFromBuffer(const BYTE* buffer, const size_t bufferSize, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer, TheWorld_Utils::MemoryBuffer& colormapBuffer, TheWorld_Utils::MemoryBuffer& globalmapBuffer, bool updateCache);
 		__declspec(dllexport) void refreshMapsFromBuffer(TheWorld_Utils::MemoryBuffer& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer, TheWorld_Utils::MemoryBuffer& colormapBuffer, TheWorld_Utils::MemoryBuffer& globalmapBuffer, bool updateCache);
 		__declspec(dllexport) void refreshMapsFromBuffer(std::string& buffer, std::string& meshIdFromBuffer, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitde, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer, TheWorld_Utils::MemoryBuffer& colormapBuffer, TheWorld_Utils::MemoryBuffer& globalmapBuffer, bool updateCache);
-		__declspec(dllexport) void readBufferFromCache(std::string meshId, TheWorld_Utils::MemoryBuffer& buffer);
-		__declspec(dllexport) void readBufferFromCache(std::string meshId, std::string& buffer);
-		__declspec(dllexport) void writeBufferToCache(std::string& buffer, bool renewMeshId = false);
-		__declspec(dllexport) void writeBufferToCache(TheWorld_Utils::MemoryBuffer& buffer, bool renewMeshId = false);
-		__declspec(dllexport) void writeBufferToCache(const BYTE* buffer, const size_t bufferSize, bool renewMeshId = false);
+		__declspec(dllexport) void refreshCacheQuadrantDataFromBuffer(const BYTE* buffer, const size_t bufferSize, CacheQuadrantData& cacheQuadrantData, bool updateCache);
+		__declspec(dllexport) void refreshCacheQuadrantDataFromBuffer(TheWorld_Utils::MemoryBuffer& buffer, CacheQuadrantData& cacheQuadrantData, bool updateCache);
+		__declspec(dllexport) void refreshCacheQuadrantDataFromBuffer(std::string& buffer, CacheQuadrantData& cacheQuadrantData, bool updateCache);
+		__declspec(dllexport) void readBufferFromDisk(std::string meshId, TheWorld_Utils::MemoryBuffer& buffer);
+		__declspec(dllexport) void readBufferFromDisk(std::string meshId, std::string& buffer);
+		__declspec(dllexport) void writeBufferToDiskCache(std::string& buffer, bool renewMeshId = false);
+		__declspec(dllexport) void writeBufferToDiskCache(TheWorld_Utils::MemoryBuffer& buffer, bool renewMeshId = false);
+		__declspec(dllexport) void writeBufferToDiskCache(const BYTE* buffer, const size_t bufferSize, bool renewMeshId = false);
 		__declspec(dllexport) void setBufferFromHeights(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude, bool generateNormals);
 		__declspec(dllexport) void setBufferFromCacheQuadrantData(size_t numVerticesPerSize, CacheQuadrantData& cacheQuadrantData, TheWorld_Utils::MemoryBuffer& buffer);
 		__declspec(dllexport) void setBufferFromCacheQuadrantData(size_t numVerticesPerSize, CacheQuadrantData& cacheQuadrantData, std::string& buffer);
@@ -515,9 +549,37 @@ namespace TheWorld_Utils
 		//	return m_cacheDir;
 		//}
 
-		__declspec(dllexport) std::string getMeshId()
+		__declspec(dllexport) std::string getMeshId(void)
 		{
 			return m_meshId;
+		}
+		__declspec(dllexport) std::string getMapName(void)
+		{
+			return m_mapName;
+		}
+		__declspec(dllexport) float getGridStepInWU(void)
+		{
+			return m_gridStepInWU;
+		}
+		__declspec(dllexport) size_t getNumVerticesPerSize(void)
+		{
+			return m_numVerticesPerSize;
+		}
+		__declspec(dllexport) int getLevel(void)
+		{
+			return m_level;
+		}
+		__declspec(dllexport) float getLowerXGridVertex(void)
+		{
+			return m_lowerXGridVertex;
+		}
+		__declspec(dllexport) float getLowerZGridVertex(void)
+		{
+			return m_lowerZGridVertex;
+		}
+		__declspec(dllexport) std::string getCacheFilePath(void)
+		{
+			return m_meshFilePath;
 		}
 
 	private:
@@ -525,6 +587,7 @@ namespace TheWorld_Utils
 		std::string m_cacheDir;
 		std::string m_meshId;
 		//std::string m_buffer;
+		std::string m_mapName;
 		float m_gridStepInWU;
 		size_t m_numVerticesPerSize;
 		int m_level;

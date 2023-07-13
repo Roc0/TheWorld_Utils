@@ -28,9 +28,6 @@ namespace fs = std::filesystem;
 
 namespace TheWorld_Utils
 {
-	Eigen::Vector3d packNormal(Eigen::Vector3d normal);
-	Eigen::Vector3d unpackNormal(Eigen::Vector3d packedNormal);
-
 	void TerrainEdit::generateGroundImage(MemoryBuffer& albedoBumpImage, MemoryBuffer& normalRoughnessImage, std::string groundTypeName, size_t imageSize, bool flipY, MemoryBuffer& colorImage, MemoryBuffer& bumpImage, MemoryBuffer& normalImage, MemoryBuffer& roughImage)
 	{
 		size_t width, heigth;
@@ -521,15 +518,16 @@ namespace TheWorld_Utils
 	{
 	}
 		
-	MeshCacheBuffer::MeshCacheBuffer(std::string cacheDir, std::string mapName, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex)
+	MeshCacheBuffer::MeshCacheBuffer(std::string _cacheDir, std::string mapName, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex)
 	{
+		m_mapName = mapName;
 		m_gridStepInWU = gridStepInWU;
 		m_numVerticesPerSize = numVerticesPerSize;
 		m_level = level;
 		m_lowerXGridVertex = lowerXGridVertex;
 		m_lowerZGridVertex = lowerZGridVertex;
 
-		m_cacheDir = std::string(cacheDir) + "\\" + "Cache\\maps\\" + mapName + "\\" + "ST-" + std::to_string(gridStepInWU) + "_SZ-" + std::to_string(numVerticesPerSize) + "\\L-" + std::to_string(level);
+		m_cacheDir = MeshCacheBuffer::cacheDir(_cacheDir, mapName, gridStepInWU, numVerticesPerSize, level);
 		if (!fs::exists(m_cacheDir))
 		{
 			fs::create_directories(m_cacheDir);
@@ -544,12 +542,18 @@ namespace TheWorld_Utils
 		*this = c;
 	}
 
+	std::string MeshCacheBuffer::cacheDir(std::string cacheDir, std::string mapName, float gridStepInWU, size_t numVerticesPerSize, int level)
+	{
+		return std::string(cacheDir) + "\\" + "Cache\\maps\\" + mapName + "\\" + "ST-" + std::to_string(gridStepInWU) + "_SZ-" + std::to_string(numVerticesPerSize) + "\\L-" + std::to_string(level);
+	}
+		
 	void MeshCacheBuffer::operator=(const MeshCacheBuffer& c)
 	{
 		m_meshFilePath = c.m_meshFilePath;
 		m_cacheDir = c.m_cacheDir;
 		m_meshId = c.m_meshId;
 		//m_buffer = c.m_buffer;
+		m_mapName = c.m_mapName;
 		m_gridStepInWU = c.m_gridStepInWU;
 		m_numVerticesPerSize = c.m_numVerticesPerSize;
 		m_level = c.m_level;
@@ -574,7 +578,6 @@ namespace TheWorld_Utils
 		localtime_s(&local_tm , &now_time_t);
 		BYTE shortBuffer[256 + 1];
 		size_t size = 0;
-		//TheWorld_Utils::serializeToByteStream<std::time_t>(now_time_t, shortBuffer, size);
 		TheWorld_Utils::serializeToByteStream<std::chrono::system_clock::time_point>(now, shortBuffer, size);
 		size_t n_zero = 2;
 		std::string year = std::to_string(local_tm.tm_year + 1900);
@@ -590,6 +593,61 @@ namespace TheWorld_Utils
 		seconds = std::string(n_zero - std::min(n_zero, seconds.length()), '0') + seconds;
 		std::string meshId = ToString(&newId)
 			+ ":" + year + "-" + month  + "-" + day + "_" + hours + "-" + minutes + "-" + seconds
+			+ ":" + std::string((char*)shortBuffer, size);
+
+		return meshId;
+	}
+
+	bool MeshCacheBuffer::isEmptyBuffer(std::string meshId)
+	{
+		assert(meshId.size() > 0);
+		if (meshId.size() == 0)
+			return true;
+
+		std::vector<std::string> v = TheWorld_Utils::Utils::split(meshId, ':');
+		assert(v.size() == 3);
+		if (v.size() != 3)
+			return true;
+
+		std::string temp = v[1].substr(0, 4);
+		if (v[1].substr(0, 4) == "1900")
+			return true;
+
+		return false;
+	}
+
+	std::string MeshCacheBuffer::generateNewMeshIdForEmptyBuffer(void)
+	{
+		GUID newId;
+		RPC_STATUS ret_val = ::UuidCreate(&newId);
+		if (ret_val != RPC_S_OK)
+		{
+			std::string msg = "UuidCreate in error with rc " + std::to_string(ret_val);
+			PLOG_ERROR << msg;
+			throw(GDN_TheWorld_Exception(__FUNCTION__, msg.c_str()));
+		}
+
+		std::chrono::system_clock::time_point oldestTime;
+		std::time_t oldest_time_t = std::chrono::system_clock::to_time_t(oldestTime);
+		tm local_tm;
+		localtime_s(&local_tm, &oldest_time_t);
+		BYTE shortBuffer[256 + 1];
+		size_t size = 0;
+		TheWorld_Utils::serializeToByteStream<std::chrono::system_clock::time_point>(oldestTime, shortBuffer, size);
+		size_t n_zero = 2;
+		std::string year = std::to_string(local_tm.tm_year + 1900);
+		std::string month = std::to_string(local_tm.tm_mon + 1);
+		month = std::string(n_zero - std::min(n_zero, month.length()), '0') + month;
+		std::string day = std::to_string(local_tm.tm_mday);
+		day = std::string(n_zero - std::min(n_zero, day.length()), '0') + day;
+		std::string hours = std::to_string(local_tm.tm_hour);
+		hours = std::string(n_zero - std::min(n_zero, hours.length()), '0') + hours;
+		std::string minutes = std::to_string(local_tm.tm_min);
+		minutes = std::string(n_zero - std::min(n_zero, minutes.length()), '0') + minutes;
+		std::string seconds = std::to_string(local_tm.tm_sec);
+		seconds = std::string(n_zero - std::min(n_zero, seconds.length()), '0') + seconds;
+		std::string meshId = ToString(&newId)
+			+ ":" + year + "-" + month + "-" + day + "_" + hours + "-" + minutes + "-" + seconds
 			+ ":" + std::string((char*)shortBuffer, size);
 
 		return meshId;
@@ -665,10 +723,61 @@ namespace TheWorld_Utils
 		//	return false;
 	}
 
-	std::string MeshCacheBuffer::getMeshIdFromCache(void)
+	void MeshCacheBuffer::getAllDiskCache(std::string _cacheDir, std::string mapName, float gridStepInWU, size_t numVerticesPerSize, int level, std::vector<MeshCacheBuffer>& vectDiskCache)
+	{
+		vectDiskCache.clear();
+
+		std::string dirPath  = MeshCacheBuffer::cacheDir(_cacheDir, mapName, gridStepInWU, numVerticesPerSize, level);
+		if (!fs::exists(dirPath))
+			return;
+
+		for (const auto& entry : fs::directory_iterator(dirPath))
+			if (entry.is_regular_file())
+			{
+				std::string filename = entry.path().filename().generic_string();
+				size_t pos = filename.find_last_of('.');
+				if (pos != std::string::npos)
+				{
+					std::string filenameNoExt = filename.substr(0, pos);
+					std::vector<std::string> v1 = TheWorld_Utils::Utils::split(filenameNoExt, '_');
+					if (v1.size() == 2)
+					{
+						float lowerXGridVertex = FLT_MAX, lowerZGridVertex = FLT_MAX;
+
+						pos = v1[0].find_first_of('-');
+						if (pos != std::string::npos)
+						{
+							std::string coord = v1[0].substr(0, pos);
+							std::string value = v1[0].substr(pos + 1);
+							if (coord == "X")
+								lowerXGridVertex = std::stof(value);
+						}
+
+						pos = v1[1].find_first_of('-');
+						if (pos != std::string::npos)
+						{
+							std::string coord = v1[1].substr(0, pos);
+							std::string value = v1[1].substr(pos + 1);
+							if (coord == "Z")
+								lowerZGridVertex = std::stof(value);
+						}
+
+						if (lowerXGridVertex != FLT_MAX && lowerZGridVertex != FLT_MAX)
+						{
+							vectDiskCache.push_back(MeshCacheBuffer(_cacheDir, mapName, gridStepInWU, numVerticesPerSize, level, lowerXGridVertex, lowerZGridVertex));
+						}
+					}
+				}
+			}
+	}
+	
+	std::string MeshCacheBuffer::getMeshIdFromDisk(void)
 	{
 		//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer getMeshIdFromCache 1") + __FUNCTION__, "ALL");
 
+		if (m_meshId.size() > 0)
+			return m_meshId;
+		
 		if (!fs::exists(m_meshFilePath))
 			return "";
 		
@@ -720,7 +829,12 @@ namespace TheWorld_Utils
 		return m_meshId;
 	}
 
-	bool MeshCacheBuffer::refreshMapsFromCache(size_t numVerticesPerSize, float gridStepInWU, std::string _meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer, TheWorld_Utils::MemoryBuffer& colormapBuffer, TheWorld_Utils::MemoryBuffer& globalmapBuffer)
+	std::string MeshCacheBuffer::getCacheIdStr(void)
+	{
+		return "MAP-" + m_mapName + "_ST-" + std::to_string(m_gridStepInWU) + "_SZ-" + std::to_string(m_numVerticesPerSize) + "_L-" + std::to_string(m_level) + "_X-" + std::to_string(m_lowerXGridVertex) + "_Z-" + std::to_string(m_lowerZGridVertex);
+	}
+
+	bool MeshCacheBuffer::refreshMapsFromDisk(size_t numVerticesPerSize, float gridStepInWU, std::string _meshId, TheWorld_Utils::MemoryBuffer& terrainEditValues, float& minAltitude, float& maxAltitude, TheWorld_Utils::MemoryBuffer& float16HeigthsBuffer, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer, TheWorld_Utils::MemoryBuffer& colormapBuffer, TheWorld_Utils::MemoryBuffer& globalmapBuffer)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer refreshMapsFromCache 1 ") + __FUNCTION__, "ALL");
 
@@ -730,7 +844,7 @@ namespace TheWorld_Utils
 		
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer refreshMapsFromCache 1.1  ") + __FUNCTION__, "readBufferFromCache");
-			readBufferFromCache(_meshId, buffer);
+			readBufferFromDisk(_meshId, buffer);
 		}
 
 		if (buffer.size() == 0)
@@ -898,7 +1012,7 @@ namespace TheWorld_Utils
 			}
 
 			if (updateCache)
-				writeBufferToCache(buffer, bufferSize);
+				writeBufferToDiskCache(buffer, bufferSize);
 		}
 		else
 		{
@@ -922,7 +1036,22 @@ namespace TheWorld_Utils
 		refreshMapsFromBuffer((BYTE*)buffer.c_str(), buffer.size(), meshIdFromBuffer, terrainEditValues, minAltitude, maxAltitude, float16HeigthsBuffer, float32HeigthsBuffer, normalsBuffer, splatmapBuffer, colormapBuffer, globalmapBuffer, updateCache);
 	}
 
-	void MeshCacheBuffer::readBufferFromCache(std::string _meshId, TheWorld_Utils::MemoryBuffer& buffer)
+	void MeshCacheBuffer::refreshCacheQuadrantDataFromBuffer(const BYTE* buffer, const size_t bufferSize, CacheQuadrantData& cacheQuadrantData, bool updateCache)
+	{
+		refreshMapsFromBuffer(buffer, bufferSize, cacheQuadrantData.meshId, *cacheQuadrantData.terrainEditValues, cacheQuadrantData.minHeight, cacheQuadrantData.maxHeight, *cacheQuadrantData.heights16Buffer, *cacheQuadrantData.heights32Buffer, *cacheQuadrantData.normalsBuffer, *cacheQuadrantData.splatmapBuffer, *cacheQuadrantData.colormapBuffer, *cacheQuadrantData.globalmapBuffer, updateCache);
+	}
+
+	void MeshCacheBuffer::refreshCacheQuadrantDataFromBuffer(TheWorld_Utils::MemoryBuffer& buffer, CacheQuadrantData& cacheQuadrantData, bool updateCache)
+	{
+		refreshCacheQuadrantDataFromBuffer(buffer.ptr(), buffer.size(), cacheQuadrantData, updateCache);
+	}
+
+	void MeshCacheBuffer::refreshCacheQuadrantDataFromBuffer(std::string& buffer, CacheQuadrantData& cacheQuadrantData, bool updateCache)
+	{
+		refreshCacheQuadrantDataFromBuffer((BYTE*)buffer.c_str(), buffer.size(), cacheQuadrantData, updateCache);
+	}
+
+	void MeshCacheBuffer::readBufferFromDisk(std::string _meshId, TheWorld_Utils::MemoryBuffer& buffer)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer readBufferFromCache 1 ") + __FUNCTION__, "ALL");
 
@@ -931,8 +1060,11 @@ namespace TheWorld_Utils
 
 		// read vertices from local cache
 		if (!fs::exists(m_meshFilePath))
+		{
+			buffer.clear();
 			return;
 			//throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("not found current quadrant in cache").c_str()));
+		}
 
 		size_t size_t_size = sizeof(size_t);	// get size of a size_t
 		size_t uint16_t_size = sizeof(uint16_t);	// the size of an half ==> float_16
@@ -1008,11 +1140,11 @@ namespace TheWorld_Utils
 		buffer.adjustSize(streamBufferSize);
 	}
 
-	void MeshCacheBuffer::readBufferFromCache(std::string _meshId, std::string& _buffer)
+	void MeshCacheBuffer::readBufferFromDisk(std::string _meshId, std::string& _buffer)
 	{
 		TheWorld_Utils::MemoryBuffer buffer;
 
-		readBufferFromCache(_meshId, buffer);
+		readBufferFromDisk(_meshId, buffer);
 		
 		size_t size = buffer.size();
 
@@ -1021,17 +1153,17 @@ namespace TheWorld_Utils
 		_buffer.append((char*)buffer.ptr(), size);
 	}
 		
-	void MeshCacheBuffer::writeBufferToCache(std::string& buffer, bool renewMeshId)
+	void MeshCacheBuffer::writeBufferToDiskCache(std::string& buffer, bool renewMeshId)
 	{
-		writeBufferToCache((BYTE*)buffer.c_str(), buffer.size(), renewMeshId);
+		writeBufferToDiskCache((BYTE*)buffer.c_str(), buffer.size(), renewMeshId);
 	}
 
-	void MeshCacheBuffer::writeBufferToCache(TheWorld_Utils::MemoryBuffer& buffer, bool renewMeshId)
+	void MeshCacheBuffer::writeBufferToDiskCache(TheWorld_Utils::MemoryBuffer& buffer, bool renewMeshId)
 	{
-		writeBufferToCache(buffer.ptr(), buffer.size(), renewMeshId);
+		writeBufferToDiskCache(buffer.ptr(), buffer.size(), renewMeshId);
 	}
 
-	void MeshCacheBuffer::writeBufferToCache(const BYTE* buffer, const size_t bufferSize, bool renewMeshId)
+	void MeshCacheBuffer::writeBufferToDiskCache(const BYTE* buffer, const size_t bufferSize, bool renewMeshId)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer writeBufferToCache 1 ") + __FUNCTION__, "ALL");
 
@@ -2124,7 +2256,7 @@ namespace TheWorld_Utils
 
 	void MeshCacheBuffer::setEmptyBuffer(size_t numVerticesPerSize, std::string& meshId, TheWorld_Utils::MemoryBuffer& buffer)
 	{
-		meshId = generateNewMeshId();
+		meshId = generateNewMeshIdForEmptyBuffer();
 		
 		TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData cacheQuadrantData;
 		cacheQuadrantData.meshId = meshId;
@@ -2150,6 +2282,16 @@ namespace TheWorld_Utils
 
 		setBufferFromCacheQuadrantData(numVerticesPerSize, cacheQuadrantData, buffer);
 	}
+
+	uint16_t MeshCacheBuffer::halfFromFloat(uint32_t f)
+	{
+		return half_from_float(f);
+	}
+	uint32_t MeshCacheBuffer::halfToFloat(uint16_t f)
+	{
+		return half_to_float(f);
+	}
+
 
 	void MeshCacheBuffer::setBufferFromHeights(std::string meshId, size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, std::vector<float>& vectGridHeights, std::string& buffer, float& minAltitude, float& maxAltitude, bool generateNormals)
 	{
