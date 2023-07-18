@@ -610,7 +610,7 @@ namespace TheWorld_Utils
 			return true;
 
 		std::string temp = v[1].substr(0, 4);
-		if (v[1].substr(0, 4) == "1900")
+		if (v[1].substr(0, 4) == "1970")
 			return true;
 
 		return false;
@@ -680,6 +680,8 @@ namespace TheWorld_Utils
 
 		std::chrono::system_clock::time_point secondTime;
 		v = TheWorld_Utils::Utils::split(secondMeshId, ':');
+		if (v.size() < 1)
+			assert(v.size() >= 1);
 		assert(v.size() >= 1);
 		if (v.size() > 1)
 		{
