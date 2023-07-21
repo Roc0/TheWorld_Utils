@@ -383,6 +383,14 @@ namespace TheWorld_Utils
 		clear();
 	}
 
+	void MemoryBuffer::toString(std::string& buffer)
+	{
+		size_t sz = size();
+		buffer.clear();
+		buffer.reserve(sz);
+		buffer.append((char*)ptr(), sz);
+	}
+
 	void MemoryBuffer::set(BYTE* in, size_t size)
 	{
 		{

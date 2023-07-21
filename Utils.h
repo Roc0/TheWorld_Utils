@@ -152,6 +152,7 @@ namespace TheWorld_Utils
 		__declspec(dllexport) void copyFrom(MemoryBuffer& inBuffer);
 		__declspec(dllexport) void populateFloatVector(std::vector<float>& v);
 		__declspec(dllexport) void populateUint16Vector(std::vector<uint16_t>& v);
+		__declspec(dllexport) void toString(std::string& buffer);
 		template <typename T> __declspec(dllexport) T& at(size_t idx)
 		{
 			T* ptr = (T*)m_ptr;
