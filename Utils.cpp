@@ -1292,15 +1292,15 @@ namespace TheWorld_Utils
 			//noiseLite.SetCellularJitter()
 
 			terrainEdit->minHeight = FLT_MAX;
-			terrainEdit->maxHeight = FLT_MIN;
+			terrainEdit->maxHeight = -FLT_MAX;
 			terrainEdit->eastSideXPlus.minHeight = FLT_MAX;
-			terrainEdit->eastSideXPlus.maxHeight = FLT_MIN;
+			terrainEdit->eastSideXPlus.maxHeight = -FLT_MAX;
 			terrainEdit->westSideXMinus.minHeight = FLT_MAX;
-			terrainEdit->westSideXMinus.maxHeight = FLT_MIN;
+			terrainEdit->westSideXMinus.maxHeight = -FLT_MAX;
 			terrainEdit->southSideZPlus.minHeight = FLT_MAX;
-			terrainEdit->southSideZPlus.maxHeight = FLT_MIN;
+			terrainEdit->southSideZPlus.maxHeight = -FLT_MAX;
 			terrainEdit->northSideZMinus.minHeight = FLT_MAX;
-			terrainEdit->northSideZMinus.maxHeight = FLT_MIN;
+			terrainEdit->northSideZMinus.maxHeight = -FLT_MAX;
 
 			size_t maxIndex = numVerticesPerSize - 1;
 			
@@ -1430,16 +1430,16 @@ namespace TheWorld_Utils
 		}
 
 		terrainEdit->eastSideXPlus.minHeight = FLT_MAX;
-		terrainEdit->eastSideXPlus.maxHeight = FLT_MIN;
+		terrainEdit->eastSideXPlus.maxHeight = -FLT_MAX;
 
 		terrainEdit->westSideXMinus.minHeight = FLT_MAX;
-		terrainEdit->westSideXMinus.maxHeight = FLT_MIN;
+		terrainEdit->westSideXMinus.maxHeight = -FLT_MAX;
 
 		terrainEdit->southSideZPlus.minHeight = FLT_MAX;
-		terrainEdit->southSideZPlus.maxHeight = FLT_MIN;
+		terrainEdit->southSideZPlus.maxHeight = -FLT_MAX;
 
 		terrainEdit->northSideZMinus.minHeight = FLT_MAX;
-		terrainEdit->northSideZMinus.maxHeight = FLT_MIN;
+		terrainEdit->northSideZMinus.maxHeight = -FLT_MAX;
 
 		size_t maxIndex = numVerticesPerSize - 1;
 
@@ -2740,15 +2740,15 @@ namespace TheWorld_Utils
 	void MeshCacheBuffer::calcMinMxHeight(size_t numVerticesPerSize, TheWorld_Utils::TerrainEdit* terrainEdit, TheWorld_Utils::MemoryBuffer& heights32Buffer)
 	{
 		terrainEdit->minHeight = FLT_MAX;
-		terrainEdit->maxHeight = FLT_MIN;
+		terrainEdit->maxHeight = -FLT_MAX;
 		terrainEdit->eastSideXPlus.minHeight = FLT_MAX;
-		terrainEdit->eastSideXPlus.maxHeight = FLT_MIN;
+		terrainEdit->eastSideXPlus.maxHeight = -FLT_MAX;
 		terrainEdit->westSideXMinus.minHeight = FLT_MAX;
-		terrainEdit->westSideXMinus.maxHeight = FLT_MIN;
+		terrainEdit->westSideXMinus.maxHeight = -FLT_MAX;
 		terrainEdit->southSideZPlus.minHeight = FLT_MAX;
-		terrainEdit->southSideZPlus.maxHeight = FLT_MIN;
+		terrainEdit->southSideZPlus.maxHeight = -FLT_MAX;
 		terrainEdit->northSideZMinus.minHeight = FLT_MAX;
-		terrainEdit->northSideZMinus.maxHeight = FLT_MIN;
+		terrainEdit->northSideZMinus.maxHeight = -FLT_MAX;
 
 		size_t maxIndex = numVerticesPerSize - 1;
 
