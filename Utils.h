@@ -219,6 +219,63 @@ namespace TheWorld_Utils
 		float scaleFactor;
 		float desideredMinHeight;
 		bool desideredMinHeigthMandatory;
+
+		bool operator==(const NoiseValues& o) const
+		{
+			if (noiseType != o.noiseType)
+				return false;
+			if (rotationType3D != o.rotationType3D)
+				return false;
+			if (noiseSeed != o.noiseSeed)
+				return false;
+			if (frequency != o.frequency)
+				return false;
+			if (fractalType != o.fractalType)
+				return false;
+			if (fractalOctaves != o.fractalOctaves)
+				return false;
+			if (fractalLacunarity != o.fractalLacunarity)
+				return false;
+			if (fractalGain != o.fractalGain)
+				return false;
+			if (fractalWeightedStrength != o.fractalWeightedStrength)
+				return false;
+			if (fractalPingPongStrength != o.fractalPingPongStrength)
+				return false;
+			if (cellularDistanceFunction != o.cellularDistanceFunction)
+				return false;
+			if (cellularReturnType != o.cellularReturnType)
+				return false;
+			if (cellularJitter != o.cellularJitter)
+				return false;
+			if (warpNoiseDomainWarpType != o.warpNoiseDomainWarpType)
+				return false;
+			if (warpNoiseRotationType3D != o.warpNoiseRotationType3D)
+				return false;
+			if (warpNoiseSeed != o.warpNoiseSeed)
+				return false;
+			if (warpNoiseDomainWarpAmp != o.warpNoiseDomainWarpAmp)
+				return false;
+			if (warpNoiseFrequency != o.warpNoiseFrequency)
+				return false;
+			if (warpNoieseFractalType != o.warpNoieseFractalType)
+				return false;
+			if (warpNoiseFractalOctaves != o.warpNoiseFractalOctaves)
+				return false;
+			if (warpNoiseFractalLacunarity != o.warpNoiseFractalLacunarity)
+				return false;
+			if (warpNoiseFractalGain != o.warpNoiseFractalGain)
+				return false;
+			if (amplitude != o.amplitude)
+				return false;
+			if (scaleFactor != o.scaleFactor)
+				return false;
+			if (desideredMinHeight != o.desideredMinHeight)
+				return false;
+			if (desideredMinHeigthMandatory != o.desideredMinHeigthMandatory)
+				return false;
+			return true;
+		}
 	};
 	
 	class TerrainSideInfo
@@ -227,6 +284,16 @@ namespace TheWorld_Utils
 		bool needBlend;
 		float minHeight;
 		float maxHeight;
+		bool operator==(const TerrainSideInfo& o) const
+		{
+			if (needBlend != o.needBlend)
+				return false;
+			if (minHeight != o.minHeight)
+				return false;
+			if (maxHeight != o.maxHeight)
+				return false;
+			return true;
+		}
 	};
 
 	class TerrainEdit
@@ -298,6 +365,7 @@ namespace TheWorld_Utils
 		__declspec(dllexport) static std::string terrainTypeString(enum class TerrainEdit::TerrainType terrainType);
 		__declspec(dllexport) static enum class TerrainEdit::TerrainType terrainTypeEnum(std::string& terrainType);
 		__declspec(dllexport) void adjustValues(TerrainEdit* northSideZMinus, TerrainEdit* southSideZPlus, TerrainEdit* westSideXMinus, TerrainEdit* eastSideXPlus);
+		__declspec(dllexport) bool operator==(const TerrainEdit& terrainEdit) const;
 	};
 
 	template<> MYAPI void MemoryBuffer::populateVector<float>(std::vector<float>& v);

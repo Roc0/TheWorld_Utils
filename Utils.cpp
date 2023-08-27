@@ -196,15 +196,15 @@ namespace TheWorld_Utils
 		eastSideXPlus.needBlend = true;
 		eastSideXPlus.minHeight = 0.0f;
 		eastSideXPlus.maxHeight = 0.0f;
-		
+
 		westSideXMinus.needBlend = true;
 		westSideXMinus.minHeight = 0.0f;
 		westSideXMinus.maxHeight = 0.0f;
-		
+
 		southSideZPlus.needBlend = true;
 		southSideZPlus.minHeight = 0.0f;
 		southSideZPlus.maxHeight = 0.0f;
-		
+
 		northSideZMinus.needBlend = true;
 		northSideZMinus.minHeight = 0.0f;
 		northSideZMinus.maxHeight = 0.0f;
@@ -216,6 +216,55 @@ namespace TheWorld_Utils
 		extraValues.texturesNeedRegen = true;
 		extraValues.emptyColormap = true;
 		extraValues.emptyGlobalmap = true;
+	}
+
+	bool TerrainEdit::operator==(const TerrainEdit& o) const
+	{
+		if (size != o.size)
+			return false;
+		if (needUploadToServer != o.needUploadToServer)
+			return false;
+		if (normalsNeedRegen != o.normalsNeedRegen)
+			return false;
+		if (terrainType != o.terrainType)
+			return false;
+		if (minHeight != o.minHeight)
+			return false;
+		if (maxHeight != o.maxHeight)
+			return false;
+		if (!(eastSideXPlus == o.eastSideXPlus) )
+			return false;
+		if (!(westSideXMinus == o.westSideXMinus) )
+			return false;
+		if ( !(southSideZPlus == o.southSideZPlus) )
+			return false;
+		if ( !(northSideZMinus == o.northSideZMinus) )
+			return false;
+		if ( !(noise == o.noise) )
+			return false;
+		if (strlen(extraValues.lowElevationTexName_r) != strlen(o.extraValues.lowElevationTexName_r))
+			return false;
+		if (strcmp(extraValues.lowElevationTexName_r, o.extraValues.lowElevationTexName_r) != 0)
+			return false;
+		if (strlen(extraValues.highElevationTexName_g) != strlen(o.extraValues.highElevationTexName_g))
+			return false;
+		if (strcmp(extraValues.highElevationTexName_g, o.extraValues.highElevationTexName_g) != 0)
+			return false;
+		if (strlen(extraValues.dirtTexName_b) != strlen(o.extraValues.dirtTexName_b))
+			return false;
+		if (strcmp(extraValues.dirtTexName_b, o.extraValues.dirtTexName_b) != 0)
+			return false;
+		if (strlen(extraValues.rocksTexName_a) != strlen(o.extraValues.rocksTexName_a))
+			return false;
+		if (strcmp(extraValues.rocksTexName_a, o.extraValues.rocksTexName_a) != 0)
+			return false;
+		if (extraValues.texturesNeedRegen != o.extraValues.texturesNeedRegen)
+			return false;
+		if (extraValues.emptyColormap != o.extraValues.emptyColormap)
+			return false;
+		if (extraValues.emptyGlobalmap != o.extraValues.emptyGlobalmap)
+			return false;
+		return true;
 	}
 
 	std::string TerrainEdit::terrainTypeString(enum class TerrainEdit::TerrainType terrainType)
