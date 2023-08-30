@@ -2186,9 +2186,10 @@ namespace TheWorld_Utils
 		size_t colormapSize = numColormapVertices > 0 ? numColormapVertices * sizeof(TheWorld_Utils::_RGBA) : sizeof(TheWorld_Utils::_RGBA);
 		size_t globalmapSize = numGlobalmapVertices > 0 ? numGlobalmapVertices * sizeof(TheWorld_Utils::_RGB) : sizeof(TheWorld_Utils::_RGB);
 
+		size_t terrainEditValueSize = cacheQuadrantData.terrainEditValues == nullptr ? 0 : cacheQuadrantData.terrainEditValues->size();
 		size_t streamBufferSize = 1 /* "0" */
 			+ sizeof(size_t) + cacheQuadrantData.meshId.length()
-			+ sizeof(size_t) + cacheQuadrantData.terrainEditValues->size()
+			+ sizeof(size_t) + terrainEditValueSize
 			+ sizeof(size_t); /* numheights */
 		if (numHeights16 > 0)
 		{
@@ -2218,13 +2219,13 @@ namespace TheWorld_Utils
 			memcpy(_streamBuffer, cacheQuadrantData.meshId.c_str(), cacheQuadrantData.meshId.length());
 			_streamBuffer += cacheQuadrantData.meshId.length();
 
-			TheWorld_Utils::serializeToByteStream<size_t>(cacheQuadrantData.terrainEditValues->size(), _streamBuffer, size);
+			TheWorld_Utils::serializeToByteStream<size_t>(terrainEditValueSize, _streamBuffer, size);
 			_streamBuffer += size;
 
-			if (cacheQuadrantData.terrainEditValues->size() > 0)
+			if (terrainEditValueSize > 0)
 			{
-				memcpy(_streamBuffer, cacheQuadrantData.terrainEditValues->ptr(), cacheQuadrantData.terrainEditValues->size());
-				_streamBuffer += cacheQuadrantData.terrainEditValues->size();
+				memcpy(_streamBuffer, cacheQuadrantData.terrainEditValues->ptr(), terrainEditValueSize);
+				_streamBuffer += terrainEditValueSize;
 			}
 		}
 
