@@ -723,6 +723,7 @@ namespace TheWorld_Utils
 			assert(v.size() > 2);
 			size_t headerToDiscardSize = v[0].size() + v[1].size() + 2;
 			std::string s = firstMeshId.substr(headerToDiscardSize);
+			size_t sz = s.size();
 			firstTime = TheWorld_Utils::deserializeFromByteStream<std::chrono::system_clock::time_point>((BYTE*)s.c_str(), size);
 		}
 
