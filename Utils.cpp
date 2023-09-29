@@ -213,7 +213,7 @@ namespace TheWorld_Utils
 		memset(extraValues.highElevationTexName_g, 0, sizeof(extraValues.highElevationTexName_g));
 		memset(extraValues.dirtTexName_b, 0, sizeof(extraValues.dirtTexName_b));
 		memset(extraValues.rocksTexName_a, 0, sizeof(extraValues.rocksTexName_a));
-		extraValues.texturesNeedRegen = true;
+		extraValues.splatmapNeedRegen = true;
 		extraValues.emptyColormap = true;
 		extraValues.emptyGlobalmap = true;
 	}
@@ -258,7 +258,7 @@ namespace TheWorld_Utils
 			return false;
 		if (strcmp(extraValues.rocksTexName_a, o.extraValues.rocksTexName_a) != 0)
 			return false;
-		if (extraValues.texturesNeedRegen != o.extraValues.texturesNeedRegen)
+		if (extraValues.splatmapNeedRegen != o.extraValues.splatmapNeedRegen)
 			return false;
 		if (extraValues.emptyColormap != o.extraValues.emptyColormap)
 			return false;
@@ -1816,7 +1816,7 @@ namespace TheWorld_Utils
 		my_assert((BYTE*)_tempNormalmapBuffer - normalsBuffer.ptr() == normalsBuffer.size());
 	}
 
-	void MeshCacheBuffer::setSplatmap(size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::TerrainEdit* terrainEdit, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer)
+	void MeshCacheBuffer::generateSplatmap(size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::TerrainEdit* terrainEdit, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer)
 	{
 		assert(float32HeigthsBuffer.size() == numVerticesPerSize * numVerticesPerSize * sizeof(float));
 		assert(normalsBuffer.size() == numVerticesPerSize * numVerticesPerSize * sizeof(struct TheWorld_Utils::_RGB));
