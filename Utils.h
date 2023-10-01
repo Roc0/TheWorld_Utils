@@ -41,6 +41,9 @@ namespace TheWorld_Utils
 	__declspec(dllexport) Eigen::Vector3d packNormal(Eigen::Vector3d normal);
 	__declspec(dllexport) Eigen::Vector3d unpackNormal(Eigen::Vector3d packedNormal);
 
+	__declspec(dllexport) void to_lower_implace(std::string& s);
+	__declspec(dllexport) std::string to_lower(std::string s);
+
 	//std::vector<std::string> split(const std::string& s, char seperator)
 	//{
 	//	std::vector<std::string> output;

@@ -28,6 +28,17 @@ namespace fs = std::filesystem;
 
 namespace TheWorld_Utils
 {
+	void to_lower_implace(std::string& s)
+	{
+		std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+	}
+	std::string to_lower(std::string s)
+	{
+		std::string ret = s;
+		std::transform(ret.begin(), ret.end(), ret.begin(), ::tolower);
+		return ret;
+	}
+
 	void TerrainEdit::generateGroundImage(MemoryBuffer& albedoBumpImage, MemoryBuffer& normalRoughnessImage, std::string groundTypeName, size_t imageSize, bool flipY, MemoryBuffer& colorImage, MemoryBuffer& bumpImage, MemoryBuffer& normalImage, MemoryBuffer& roughImage)
 	{
 		size_t width, heigth;
