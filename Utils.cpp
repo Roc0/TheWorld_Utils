@@ -668,13 +668,13 @@ namespace TheWorld_Utils
 
 	bool MeshCacheBuffer::isEmptyBuffer(std::string meshId)
 	{
-		assert(meshId.size() > 0);
+		my_assert(meshId.size() > 0);
 		if (meshId.size() == 0)
 			return true;
 
 		std::vector<std::string> v = TheWorld_Utils::Utils::split(meshId, ':');
-		assert(v.size() == 3);
-		if (v.size() != 3)
+		my_assert(v.size() >= 3);
+		if (v.size() < 3)
 			return true;
 
 		std::string temp = v[1].substr(0, 4);
@@ -728,10 +728,12 @@ namespace TheWorld_Utils
 
 		std::chrono::system_clock::time_point firstTime;
 		std::vector<std::string> v = TheWorld_Utils::Utils::split(firstMeshId, ':');
-		assert(v.size() >= 1);
+		my_assert(v.size() >= 1);
 		if (v.size() > 1)
 		{
-			assert(v.size() > 2);
+			if (v.size() >= 4)
+				assert(v.size() >= 4);	// DEBUGBREAKPOINT
+			my_assert(v.size() > 2);
 			size_t headerToDiscardSize = v[0].size() + v[1].size() + 2;
 			std::string s = firstMeshId.substr(headerToDiscardSize);
 			size_t sz = s.size();
@@ -749,14 +751,15 @@ namespace TheWorld_Utils
 
 		std::chrono::system_clock::time_point secondTime;
 		v = TheWorld_Utils::Utils::split(secondMeshId, ':');
-		if (v.size() < 1)
-			assert(v.size() >= 1);
-		assert(v.size() >= 1);
+		my_assert(v.size() >= 1);
 		if (v.size() > 1)
 		{
-			assert(v.size() > 2);
+			if (v.size() >= 4)
+				assert(v.size() >= 4);	// DEBUGBREAKPOINT
+			my_assert(v.size() > 2);
 			size_t headerToDiscardSize = v[0].size() + v[1].size() + 2;
 			std::string s = secondMeshId.substr(headerToDiscardSize);
+			size_t sz = s.size();
 			secondTime = TheWorld_Utils::deserializeFromByteStream<std::chrono::system_clock::time_point>((BYTE*)s.c_str(), size);
 		}
 

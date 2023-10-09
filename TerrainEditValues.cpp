@@ -5,7 +5,7 @@
 
 namespace TheWorld_Utils
 {
-	std::string TerrainEdit::getTextureNameForTerrainType(enum class TerrainEdit::TerrainType terrainType, enum class TerrainEdit::TextureType textureType)
+	std::string TerrainEdit::getDefaultTextureNameForTerrainType(enum class TerrainEdit::TerrainType terrainType, enum class TerrainEdit::TextureType textureType)
 	{
 		std::string ret = "";
 
@@ -52,7 +52,7 @@ namespace TheWorld_Utils
 
 	void TerrainEdit::setTextureNameForTerrainType(enum class TerrainEdit::TextureType textureType)
 	{
-		std::string texName = getTextureNameForTerrainType(terrainType, textureType);
+		std::string texName = getDefaultTextureNameForTerrainType(terrainType, textureType);
 		if (textureType == TerrainEdit::TextureType::lowElevation)
 			strcpy_s(extraValues.lowElevationTexName_r, sizeof(extraValues.lowElevationTexName_r), texName.c_str());
 		else if (textureType == TerrainEdit::TextureType::highElevation)
@@ -65,13 +65,13 @@ namespace TheWorld_Utils
 
 	void TerrainEdit::init(enum class TerrainEdit::TerrainType terrainType)
 	{
-		std::string s = getTextureNameForTerrainType(terrainType, TerrainEdit::TextureType::lowElevation);
+		std::string s = getDefaultTextureNameForTerrainType(terrainType, TerrainEdit::TextureType::lowElevation);
 		strcpy_s(extraValues.lowElevationTexName_r, sizeof(extraValues.lowElevationTexName_r), s.c_str());
-		s = getTextureNameForTerrainType(terrainType, TerrainEdit::TextureType::highElevation);
+		s = getDefaultTextureNameForTerrainType(terrainType, TerrainEdit::TextureType::highElevation);
 		strcpy_s(extraValues.highElevationTexName_g, sizeof(extraValues.highElevationTexName_g), s.c_str());
-		s = getTextureNameForTerrainType(terrainType, TerrainEdit::TextureType::dirt);
+		s = getDefaultTextureNameForTerrainType(terrainType, TerrainEdit::TextureType::dirt);
 		strcpy_s(extraValues.dirtTexName_b, sizeof(extraValues.dirtTexName_b), s.c_str());
-		s = getTextureNameForTerrainType(terrainType, TerrainEdit::TextureType::rocks);
+		s = getDefaultTextureNameForTerrainType(terrainType, TerrainEdit::TextureType::rocks);
 		strcpy_s(extraValues.rocksTexName_a, sizeof(extraValues.rocksTexName_a), s.c_str());
 
 		switch (terrainType)

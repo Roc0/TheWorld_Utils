@@ -332,7 +332,7 @@ namespace TheWorld_Utils
 			, noise_1 = 12
 		};
 
-		__declspec(dllexport) static std::string getTextureNameForTerrainType(enum class TerrainType terrainType, enum class TextureType textureType);
+		__declspec(dllexport) static std::string getDefaultTextureNameForTerrainType(enum class TerrainType terrainType, enum class TextureType textureType);
 
 		size_t size;
 		bool needUploadToServer;
