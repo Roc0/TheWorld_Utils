@@ -1845,39 +1845,9 @@ namespace TheWorld_Utils
 		for (size_t z = 0; z < numVerticesPerSize; z++)
 			for (size_t x = 0; x < numVerticesPerSize; x++)
 			{
-				//float h = float32HeigthsBuffer.at<float>(x, z, numVerticesPerSize);
-				//struct TheWorld_Utils::_RGB rgb = normalsBuffer.at<TheWorld_Utils::_RGB>(x, z, numVerticesPerSize);
-				//Eigen::Vector3d packedNormal((const double)(float(rgb.r) / 255), (const double)(float(rgb.g) / 255), (const double)(float(rgb.b) / 255));
-				//Eigen::Vector3d normal = unpackNormal(packedNormal);
-				//normal.normalized();
-				//Eigen::Vector3d up(0, 1.0, 0);
-				//float slope = 1 - float(normal.dot(up));	// slope 0 ==> 1 : 1 max slope, 0 flat terrain
-				//slope = 4.0f * slope - 2.0f;				// slope 2 ==> -2 : 2 max slope, -2 flat terrain
-
-				//// amaounts range from 0.0f to 1.0f
-				//float rocksAmount = TheWorld_Utils::Utils::clamp<float>(slope, 0.0f, 1.0f);
-				//float dirtAmount = TheWorld_Utils::Utils::clamp<float>(1.0f - slope, 0.0f, 1.0f);
-				//float lowElevationAmount, highElevationAmount;
-				//if (diffAltitude == 0.0f)
-				//{
-				//	lowElevationAmount = 1.0f;
-				//	highElevationAmount = 0.0f;
-				//}
-				//else
-				//{
-				//	float f = (3.0f * h) / diffAltitude;	// altitude transformed from 0.0f to 3.0f: from 0.0f to 1.0 all amount to lowAltitude, from 2.0f to 3.0f all amount to highAltitude else interpolated
-				//	highElevationAmount = TheWorld_Utils::Utils::clamp<float>(f, 1.0f, 2.0f) - 1.0f;	// range from 0 to 1: 0 all low, 1 all high
-				//	lowElevationAmount = 1.0f - highElevationAmount;
-				//}
-
-				//struct TheWorld_Utils::_RGBA rgba = splatmapBuffer.at<TheWorld_Utils::_RGBA>(x, z, numVerticesPerSize);
-				//rgba.r = BYTE(lowElevationAmount * 255);
-				//rgba.g = BYTE(highElevationAmount * 255);
-				//rgba.b = BYTE(dirtAmount * 255);
-				//rgba.a = BYTE(rocksAmount * 255);
-
 				float h = float32HeigthsBuffer.at<float>(x, z, numVerticesPerSize);
 				struct TheWorld_Utils::_RGB rgbNormal = normalsBuffer.at<TheWorld_Utils::_RGB>(x, z, numVerticesPerSize);
+				// normals coords range from 0 to 255 in normals buffer we need they range from 0.0 to 1.0
 				Eigen::Vector3d packedNormal((const double)(double(rgbNormal.r) / 255), (const double)(double(rgbNormal.g) / 255), (const double)(double(rgbNormal.b) / 255));
 						//float nx = (float)packedNormal.x();
 						//float ny = (float)packedNormal.y();
@@ -1892,8 +1862,9 @@ namespace TheWorld_Utils
 						//nz = (float)normal.z();
 				Eigen::Vector3d up(0.0f, 1.0f, 0.0f);
 				
+				// component on up direction of the normal (it is the y component of the normal if up is classic up == 0, 1, 0)
 				float dot = float(normal.dot(up));
-				float slope = 4.0f * (1.0f - dot) - 1.0f;
+				float slope = (4.0f * (1.0f - dot)) - 1.0f;
 				//float slope = 4.0f * (1.0f - float(normal.dot(up))) - 1.0f;	// slope -1 / 3, -1=flat terrain, 3=vertical terrain
 						//float f = float(normal.dot(up));
 
@@ -3680,12 +3651,14 @@ namespace TheWorld_Utils
 		return guid_string;
 	}
 
+	// normals coord range from 0 to 1
 	Eigen::Vector3d packNormal(Eigen::Vector3d normal)
 	{
 		Eigen::Vector3d temp = 0.5 * (normal + Eigen::Vector3d(1, 1, 1));
 		return Eigen::Vector3d(temp.x(), temp.z(), temp.y());
 	}
 
+	// normals coord range from 0 to 1
 	Eigen::Vector3d unpackNormal(Eigen::Vector3d packedNormal)
 	{
 		Eigen::Vector3d temp(packedNormal.x(), packedNormal.z(), packedNormal.y());
