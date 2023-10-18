@@ -598,6 +598,12 @@ namespace TheWorld_Utils
 		m_cacheDir = MeshCacheBuffer::cacheDir(_cacheDir, mapName, gridStepInWU, numVerticesPerSize, level);
 		if (!fs::exists(m_cacheDir))
 		{
+			if (m_cacheDir.length() < 10)
+			{
+				std::string msg = std::string("Beccato " + _cacheDir + " " + mapName + " " + std::to_string(gridStepInWU) + " " + std::to_string(numVerticesPerSize) + " " + std::to_string(level) + " " + std::to_string(lowerXGridVertex) + " " + std::to_string(lowerZGridVertex));
+				PLOG_ERROR << msg;
+				throw(GDN_TheWorld_Exception(__FUNCTION__, msg.c_str()));
+			}
 			fs::create_directories(m_cacheDir);
 		}
 		std::string cacheFileName = "X-" + std::to_string(lowerXGridVertex) + "_Z-" + std::to_string(lowerZGridVertex) + ".mesh";
@@ -1830,7 +1836,13 @@ namespace TheWorld_Utils
 		my_assert((BYTE*)_tempNormalmapBuffer - normalsBuffer.ptr() == normalsBuffer.size());
 	}
 
-	void MeshCacheBuffer::generateSplatmap(size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::TerrainEdit* terrainEdit, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer)
+	void MeshCacheBuffer::generateSplatmap(size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::TerrainEdit* terrainEdit, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer,
+											float slopeVerticalFactor,	// if higher slope will have higher maximum and so rocks will be more diffuse on slopes
+											float slopeFlatFactor,		// if higher slope will have lesser mininum and maximum so rocks will be less diffuse on slopes
+											float dirtOnRocksFactor,	// if higher dirt will be more diffuse on rocks
+											float highElevationFactor,	// if higher high elevation amount will be higher at lower altitude
+											float lowElevationFactor,	// if higher low elevation amount will be higher at higher altitude
+											size_t splatMapMode)
 	{
 		assert(float32HeigthsBuffer.size() == numVerticesPerSize * numVerticesPerSize * sizeof(float));
 		assert(normalsBuffer.size() == numVerticesPerSize * numVerticesPerSize * sizeof(struct TheWorld_Utils::_RGB));
@@ -1862,37 +1874,64 @@ namespace TheWorld_Utils
 						//nz = (float)normal.z();
 				Eigen::Vector3d up(0.0f, 1.0f, 0.0f);
 				
-				// component on up direction of the normal (it is the y component of the normal if up is classic up == 0, 1, 0)
-				float dot = float(normal.dot(up));
-				float slope = (4.0f * (1.0f - dot)) - 1.0f;
-				//float slope = 4.0f * (1.0f - float(normal.dot(up))) - 1.0f;	// slope -1 / 3, -1=flat terrain, 3=vertical terrain
-						//float f = float(normal.dot(up));
+				// component on up direction of the normal (it is the y component of the normal if up is classic up == 0, 1, 0) - It ranges from 0=vertical terrain to 1=flat terrain
+				float upComponent = float(normal.dot(up));
+				
+				//float slopeVerticalFactor = 4.0f;	// if higher slope will have higher maximum and so rocks will be more diffuse on slopes
+				//float slopeFlatFactor = 1.0f;		// if higher slope will have lesser mininum and maximum so rocks will be less diffuse on slopes
+				//float dirtOnRocksFactor = 2.0f;	// if higher dirt will be more diffuse on rocks
+				//float highElevationFactor = 4.0f;	// if higher high elevation amount will be higher at lower altitude
+				//float lowElevationFactor = 2.0f;	// if higher low elevation amount will be higher at higher altitude
+				//size_t splatMapMode = 1;
 
-				// amaounts range from 0.0f to 1.0f
-				float rocksAmount = TheWorld_Utils::Utils::clamp<float>(slope, 0.0f, 1.0f);
-				float dirtAmount = TheWorld_Utils::Utils::clamp<float>(rocksAmount * 2, 0.0f, 1.0f);
-				float highElevationAmount = 4.0f * ((h - terrainEdit->minHeight) / diffAltitude) - 2.0f;		// -2 / 2: -2=min_height, 2=at max_height
-				highElevationAmount = TheWorld_Utils::Utils::clamp<float>(highElevationAmount, 0.0f, 1.0f);		// capped from 0 and 1 (-2 / 0 = 0, 1 / 2 = 1)
-				float lowElevationAmount = 1.0f - highElevationAmount;
+				// (1.0f - upComponent) ranges from 0=flat terrain to 1=vertical terrain so slope ranges from 0-slopeFlatFactor=flat terrain to slopeVerticalFactor-slopeFlatFactor=vertical terrain
+				float slope = (slopeVerticalFactor * (1.0f - upComponent)) - slopeFlatFactor;
 
-				if (rocksAmount == 0.0f)
-					rocksAmount = 0.0f;
+				// amounts range from 0.0f to 1.0f
+				float rocksAmount = TheWorld_Utils::Utils::clamp<float>(slope, 0.0f, 1.0f);								// rocksAmount is max when slope is greater than 1 (vertical enough) and is null when slope is less than 0 (flat enough), otherwise it grows with the slope (if slope between 0 and 1)
+				float dirtAmount = TheWorld_Utils::Utils::clamp<float>(rocksAmount * dirtOnRocksFactor, 0.0f, 1.0f);	// dirt grows on rocks
+				float highElevationAmount = highElevationFactor * ((h - terrainEdit->minHeight) / diffAltitude) - lowElevationFactor;		// ranges from -lowElevationFactor to highElevationFactor-lowElevationFactor
+				highElevationAmount = TheWorld_Utils::Utils::clamp<float>(highElevationAmount, 0.0f, 1.0f);		// highElevationAmount is capped from 0 and 1
+				float lowElevationAmount = 1.0f - highElevationAmount;											// lowElevationAmount is the complement of highElevationAmount in range 0/1
+
+				//if (rocksAmount == 0.0f)
+				//	rocksAmount = 0.0f;
 
 				struct TheWorld_Utils::_RGBA* rgba = splatmapBuffer.at_ptr<TheWorld_Utils::_RGBA>(x, z, numVerticesPerSize);
 
-				float r = lowElevationAmount;
-				r = std::lerp(r, 0.0f, highElevationAmount);	// with higher priority: if highElevationAmount=0 r is unchanged, if highElevationAmount==>1 r==>0 (highElevationAmount can lower lowElevationAmount)
-				r = std::lerp(r, 0.0f, dirtAmount);				// with higher priority: if dirtAmount=0 r is unchanged, if dirtAmount==>1 r==>0 (dirtAmount can lower lowElevationAmount)
-				r = std::lerp(r, 0.0f, rocksAmount);			// with higher priority: if rocksAmount=0 r is unchanged, if rocksAmount==>1 r==>0 (rocksAmount can lower lowElevationAmount)
-					
-				float g = highElevationAmount;
-				g = std::lerp(g, 0.0f, dirtAmount);				// with higher priority: if dirtAmount=0 g is unchanged, if dirtAmount==>1 g==>0 (dirtAmount can lower highElevationAmount)
-				g = std::lerp(g, 0.0f, rocksAmount);			// with higher priority: if rocksAmount=0 g is unchanged, if rocksAmount==>1 g==>0 (rocksAmount can lower highElevationAmount)
+				float r, g, b, a;
+				if (splatMapMode == 1)
+				{
+					r = lowElevationAmount;
+					r = std::lerp(r, 0.0f, highElevationAmount);	// with higher priority: if highElevationAmount=0 r is unchanged, if highElevationAmount==>1 r==>0 (highElevationAmount can lower lowElevationAmount)
+					r = std::lerp(r, 0.0f, dirtAmount);				// with higher priority: if dirtAmount=0 r is unchanged, if dirtAmount==>1 r==>0 (dirtAmount can lower lowElevationAmount)
+					r = std::lerp(r, 0.0f, rocksAmount);			// with higher priority: if rocksAmount=0 r is unchanged, if rocksAmount==>1 r==>0 (rocksAmount can lower lowElevationAmount)
 
-				float b = dirtAmount;
-				b = std::lerp(b, 0.0f, rocksAmount);			// with higher priority: if rocksAmount=0 b is unchanged, if rocksAmount==>1 b==>0 (rocksAmount can lower dirtAmount)
+					g = highElevationAmount;
+					g = std::lerp(g, 0.0f, dirtAmount);				// with higher priority: if dirtAmount=0 g is unchanged, if dirtAmount==>1 g==>0 (dirtAmount can lower highElevationAmount)
+					g = std::lerp(g, 0.0f, rocksAmount);			// with higher priority: if rocksAmount=0 g is unchanged, if rocksAmount==>1 g==>0 (rocksAmount can lower highElevationAmount)
 
-				float a = rocksAmount;
+					b = dirtAmount;
+					b = std::lerp(b, 0.0f, rocksAmount);			// with higher priority: if rocksAmount=0 b is unchanged, if rocksAmount==>1 b==>0 (rocksAmount can lower dirtAmount)
+
+					a = rocksAmount;
+				}
+				else
+				{
+					a = rocksAmount;
+					a = std::lerp(a, 0.0f, dirtAmount);
+					a = std::lerp(a, 0.0f, highElevationAmount);
+					a = std::lerp(a, 0.0f, lowElevationAmount);
+
+					b = dirtAmount;
+					b = std::lerp(b, 0.0f, highElevationAmount);
+					b = std::lerp(b, 0.0f, lowElevationAmount);
+
+					g = highElevationAmount;
+					g = std::lerp(g, 0.0f, lowElevationAmount);
+
+					r = lowElevationAmount;
+				}
 
 				rgba->r = BYTE(r * 255);
 				rgba->g = BYTE(g * 255);
