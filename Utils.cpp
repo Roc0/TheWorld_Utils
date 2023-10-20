@@ -596,14 +596,14 @@ namespace TheWorld_Utils
 		m_lowerZGridVertex = lowerZGridVertex;
 
 		m_cacheDir = MeshCacheBuffer::cacheDir(_cacheDir, mapName, gridStepInWU, numVerticesPerSize, level);
+		if (m_cacheDir.length() < 10)
+		{
+			std::string msg = std::string("Beccato " + _cacheDir + " " + mapName + " " + std::to_string(gridStepInWU) + " " + std::to_string(numVerticesPerSize) + " " + std::to_string(level) + " " + std::to_string(lowerXGridVertex) + " " + std::to_string(lowerZGridVertex));
+			PLOG_ERROR << msg;
+			throw(GDN_TheWorld_Exception(__FUNCTION__, msg.c_str()));
+		}
 		if (!fs::exists(m_cacheDir))
 		{
-			if (m_cacheDir.length() < 10)
-			{
-				std::string msg = std::string("Beccato " + _cacheDir + " " + mapName + " " + std::to_string(gridStepInWU) + " " + std::to_string(numVerticesPerSize) + " " + std::to_string(level) + " " + std::to_string(lowerXGridVertex) + " " + std::to_string(lowerZGridVertex));
-				PLOG_ERROR << msg;
-				throw(GDN_TheWorld_Exception(__FUNCTION__, msg.c_str()));
-			}
 			fs::create_directories(m_cacheDir);
 		}
 		std::string cacheFileName = "X-" + std::to_string(lowerXGridVertex) + "_Z-" + std::to_string(lowerZGridVertex) + ".mesh";
