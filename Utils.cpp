@@ -1804,17 +1804,17 @@ namespace TheWorld_Utils
 					{
 						//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals 1.2.3 ") + __FUNCTION__, "RGB");
 
-								float nx2 = float(normal.x());
-								float ny2 = float(normal.y());
-								float nz2 = float(normal.z());
+								float nx2 = float(normal.x());	// DEBUG ONLY
+								float ny2 = float(normal.y());	// DEBUG ONLY
+								float nz2 = float(normal.z());	// DEBUG ONLY
 						Eigen::Vector3d packedNormal = packNormal(normal);
-								float nx = float(packedNormal.x());
-								float ny = float(packedNormal.y());
-								float nz = float(packedNormal.z());
+								float nx = float(packedNormal.x());	// DEBUG ONLY
+								float ny = float(packedNormal.y());	// DEBUG ONLY
+								float nz = float(packedNormal.z());	// DEBUG ONLY
 						//Eigen::Vector3d unpackedNormal = unpackNormal(packedNormal);
-						//		float nx1 = float(unpackedNormal.x());
-						//		float ny1 = float(unpackedNormal.y());
-						//		float nz1 = float(unpackedNormal.z());
+						//		float nx1 = float(unpackedNormal.x());	// DEBUG ONLY
+						//		float ny1 = float(unpackedNormal.y());	// DEBUG ONLY
+						//		float nz1 = float(unpackedNormal.z());	// DEBUG ONLY
 						struct _RGB rgb;
 						rgb.r = (BYTE)(packedNormal.x() * 255);	// normals coords range from 0 to 1 but if expressed as color in a normalmap range from 0 to 255
 						rgb.g = (BYTE)(packedNormal.y() * 255);
