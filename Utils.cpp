@@ -1187,7 +1187,7 @@ namespace TheWorld_Utils
 		// and deserialize it
 		std::string meshId((char*)shortBuffer, meshIdSize);
 
-		if (meshId != _meshId)
+		if (_meshId.length() > 0 && meshId != _meshId)
 		{
 			fclose(inFile);
 			throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("meshId from cache (") + meshId + ") not equal to meshId from server (" + _meshId).c_str()));
@@ -1804,13 +1804,13 @@ namespace TheWorld_Utils
 					{
 						//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals 1.2.3 ") + __FUNCTION__, "RGB");
 
-								//float nx2 = float(normal.x());
-								//float ny2 = float(normal.y());
-								//float nz2 = float(normal.z());
+								float nx2 = float(normal.x());
+								float ny2 = float(normal.y());
+								float nz2 = float(normal.z());
 						Eigen::Vector3d packedNormal = packNormal(normal);
-								//float nx = float(packedNormal.x());
-								//float ny = float(packedNormal.y());
-								//float nz = float(packedNormal.z());
+								float nx = float(packedNormal.x());
+								float ny = float(packedNormal.y());
+								float nz = float(packedNormal.z());
 						//Eigen::Vector3d unpackedNormal = unpackNormal(packedNormal);
 						//		float nx1 = float(unpackedNormal.x());
 						//		float ny1 = float(unpackedNormal.y());
@@ -2466,7 +2466,7 @@ namespace TheWorld_Utils
 			minAltitude = 0, maxAltitude = 0;
 			bool first = true;
 			size_t idx = 0;
-			if (vectSize > 0)
+			if (vectSize > 0 && _tempFloat16HeithmapBuffer != nullptr)
 			{
 				{
 					//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer setBufferFromHeights 1.3.1 ") + __FUNCTION__, "serialize heights");
