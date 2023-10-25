@@ -27,12 +27,12 @@
 #include "gsl\assert"
 #include <Eigen/Dense>
 
-#define Vector3Zero Vector3(0, 0, 0)
-#define Vector3UP Vector3(0, 1, 0)
+#define Vector3Zero godot::Vector3(0, 0, 0)
+#define Vector3UP godot::Vector3(0, 1, 0)
 
-#define Vector3X Vector3(1, 0, 0)
-#define Vector3Y Vector3(0, 1, 0)
-#define Vector3Z Vector3(0, 0, 1)
+#define Vector3X godot::Vector3(1, 0, 0)
+#define Vector3Y godot::Vector3(0, 1, 0)
+#define Vector3Z godot::Vector3(0, 0, 1)
 
 namespace TheWorld_Utils
 {
@@ -40,6 +40,8 @@ namespace TheWorld_Utils
 
 	__declspec(dllexport) Eigen::Vector3d packNormal(Eigen::Vector3d normal);
 	__declspec(dllexport) Eigen::Vector3d unpackNormal(Eigen::Vector3d packedNormal);
+	__declspec(dllexport) void packNormal(float normalX, float normalY, float normalZ, float& packedNormalX, float& packedNormalY, float& packedNormalZ);
+	__declspec(dllexport) void unpackNormal(float packedNormalX, float packedNormalY, float packedNormalZ, float& normalX, float& normalY, float& normalZ);
 
 	__declspec(dllexport) void to_lower_implace(std::string& s);
 	__declspec(dllexport) std::string to_lower(std::string s);

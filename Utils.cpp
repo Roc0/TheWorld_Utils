@@ -3705,4 +3705,19 @@ namespace TheWorld_Utils
 		//Eigen::Vector3d temp = (2 * packedNormal) - Eigen::Vector3d(1, 1, 1);
 		//return Eigen::Vector3d(temp.x(), temp.z(), temp.y());
 	}
+	void packNormal(float normalX, float normalY, float normalZ, float& packedNormalX, float& packedNormalY, float& packedNormalZ)
+	{
+		Eigen::Vector3d packedNormal = TheWorld_Utils::packNormal(Eigen::Vector3d(normalX, normalY, normalZ));
+		packedNormalX = float(packedNormal.x());
+		packedNormalY = float(packedNormal.y());
+		packedNormalZ = float(packedNormal.z());
+	}
+
+	void unpackNormal(float packedNormalX, float packedNormalY, float packedNormalZ, float& normalX, float& normalY, float& normalZ)
+	{
+		Eigen::Vector3d normal = TheWorld_Utils::unpackNormal(Eigen::Vector3d(packedNormalX, packedNormalY, packedNormalZ));
+		normalX = float(normal.x());
+		normalY = float(normal.y());
+		normalZ = float(normal.z());
+	}
 }
