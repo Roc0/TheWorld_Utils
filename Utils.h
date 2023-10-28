@@ -25,7 +25,10 @@
 #include <exception>
 #include <plog/Log.h>
 #include "gsl\assert"
+
+#pragma warning(push, 0)
 #include <Eigen/Dense>
+#pragma warning(pop)
 
 #define Vector3Zero godot::Vector3(0, 0, 0)
 #define Vector3UP godot::Vector3(0, 1, 0)
