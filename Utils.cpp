@@ -1691,7 +1691,7 @@ namespace TheWorld_Utils
 			}
 	}
 		
-	void MeshCacheBuffer::generateNormalsForBlendedQuadrants(size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer)
+	void MeshCacheBuffer::generateNormalsForBlendedQuadrants(size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, bool& requestedExit)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals 1 ") + __FUNCTION__, "ALL");
 
@@ -1716,6 +1716,9 @@ namespace TheWorld_Utils
 			{
 				for (int x = 0; x < numVerticesPerSize; x++)		// m_heightMapImage->get_width()
 				{
+					if (requestedExit)
+						return;
+					
 					float h = float32HeigthsBuffer.at<float>(x, z, numVerticesPerSize);
 
 					Eigen::Vector3d normal;
@@ -3562,9 +3565,9 @@ namespace TheWorld_Utils
 		}
 	}
 
-	size_t ThreadPool::getNumWorkingThreads(size_t& m_maxThreads)
+	size_t ThreadPool::getNumWorkingThreads(size_t& maxThreads)
 	{
-		m_maxThreads = m_threads.size();
+		maxThreads = m_threads.size();
 		return m_workingThreads;
 	}
 		
