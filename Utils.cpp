@@ -220,10 +220,10 @@ namespace TheWorld_Utils
 		northSideZMinus.minHeight = 0.0f;
 		northSideZMinus.maxHeight = 0.0f;
 
-		memset(extraValues.lowElevationTexName_r, 0, sizeof(extraValues.lowElevationTexName_r));
-		memset(extraValues.highElevationTexName_g, 0, sizeof(extraValues.highElevationTexName_g));
-		memset(extraValues.dirtTexName_b, 0, sizeof(extraValues.dirtTexName_b));
-		memset(extraValues.rocksTexName_a, 0, sizeof(extraValues.rocksTexName_a));
+		//memset(extraValues.lowElevationTexName_r, 0, sizeof(extraValues.lowElevationTexName_r));
+		//memset(extraValues.highElevationTexName_g, 0, sizeof(extraValues.highElevationTexName_g));
+		//memset(extraValues.dirtTexName_b, 0, sizeof(extraValues.dirtTexName_b));
+		//memset(extraValues.rocksTexName_a, 0, sizeof(extraValues.rocksTexName_a));
 		extraValues.splatmapNeedRegen = true;
 		extraValues.emptyColormap = true;
 		extraValues.emptyGlobalmap = true;
@@ -1807,14 +1807,14 @@ namespace TheWorld_Utils
 					{
 						//TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer generateNormals 1.2.3 ") + __FUNCTION__, "RGB");
 
-								float nx2 = float(normal.x());	// DEBUG ONLY
-								float ny2 = float(normal.y());	// DEBUG ONLY
-								float nz2 = float(normal.z());	// DEBUG ONLY
+								//float nx2 = float(normal.x());		// DEBUG ONLY
+								//float ny2 = float(normal.y());		// DEBUG ONLY
+								//float nz2 = float(normal.z());		// DEBUG ONLY
 						Eigen::Vector3d packedNormal = packNormal(normal);
-								float nx = float(packedNormal.x());	// DEBUG ONLY
-								float ny = float(packedNormal.y());	// DEBUG ONLY
-								float nz = float(packedNormal.z());	// DEBUG ONLY
-						//Eigen::Vector3d unpackedNormal = unpackNormal(packedNormal);
+								//float nx = float(packedNormal.x());	// DEBUG ONLY
+								//float ny = float(packedNormal.y());	// DEBUG ONLY
+								//float nz = float(packedNormal.z());	// DEBUG ONLY
+						//Eigen::Vector3d unpackedNormal = unpackNormal(packedNormal);	// DEBUG ONLY
 						//		float nx1 = float(unpackedNormal.x());	// DEBUG ONLY
 						//		float ny1 = float(unpackedNormal.y());	// DEBUG ONLY
 						//		float nz1 = float(unpackedNormal.z());	// DEBUG ONLY
@@ -1840,11 +1840,11 @@ namespace TheWorld_Utils
 	}
 
 	void MeshCacheBuffer::generateSplatmap(size_t numVerticesPerSize, float gridStepInWU, TheWorld_Utils::TerrainEdit* terrainEdit, TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer,
-											float slopeVerticalFactor,	// if higher slope will have higher maximum and so rocks will be more diffuse on slopes
-											float slopeFlatFactor,		// if higher slope will have lesser mininum and maximum so rocks will be less diffuse on slopes
-											float dirtOnRocksFactor,	// if higher dirt will be more diffuse on rocks
-											float highElevationFactor,	// if higher high elevation amount will be higher at lower altitude
-											float lowElevationFactor,	// if higher low elevation amount will be higher at higher altitude
+											float slopeVerticalFactor,	// raising it slope will have higher maximum and so rocks will be more diffuse on slopes
+											float slopeFlatFactor,		// raising it slope will have lesser mininum and maximum so rocks will be less diffuse on slopes
+											float dirtOnRocksFactor,	// raising it dirt will be more diffuse on rocks
+											float highElevationFactor,	// raising it high elevation amount will be greater at lower altitude
+											float lowElevationFactor,	// raising it low elevation amount will be greater at higher altitude
 											size_t splatMapMode)
 	{
 		assert(float32HeigthsBuffer.size() == numVerticesPerSize * numVerticesPerSize * sizeof(float));
@@ -1864,29 +1864,22 @@ namespace TheWorld_Utils
 				struct TheWorld_Utils::_RGB rgbNormal = normalsBuffer.at<TheWorld_Utils::_RGB>(x, z, numVerticesPerSize);
 				// normals coords range from 0 to 255 in normals buffer we need they range from 0.0 to 1.0
 				Eigen::Vector3d packedNormal((const double)(double(rgbNormal.r) / 255), (const double)(double(rgbNormal.g) / 255), (const double)(double(rgbNormal.b) / 255));
-						//float nx = (float)packedNormal.x();
-						//float ny = (float)packedNormal.y();
-						//float nz = (float)packedNormal.z();
+						//float nx = (float)packedNormal.x();	// DEBUG ONLY
+						//float ny = (float)packedNormal.y();	// DEBUG ONLY
+						//float nz = (float)packedNormal.z();	// DEBUG ONLY
 				Eigen::Vector3d normal = unpackNormal(packedNormal);
-						//nx = (float)normal.x();
-						//ny = (float)normal.y();
-						//nz = (float)normal.z();
-				//normal = normal.normalized();
-						//nx = (float)normal.x();
-						//ny = (float)normal.y();
-						//nz = (float)normal.z();
+						//nx = (float)normal.x();				// DEBUG ONLY
+						//ny = (float)normal.y();				// DEBUG ONLY
+						//nz = (float)normal.z();				// DEBUG ONLY
+				//normal = normal.normalized();					// DEBUG ONLY
+						//nx = (float)normal.x();				// DEBUG ONLY
+						//ny = (float)normal.y();				// DEBUG ONLY
+						//nz = (float)normal.z();				// DEBUG ONLY
 				Eigen::Vector3d up(0.0f, 1.0f, 0.0f);
 				
 				// component on up direction of the normal (it is the y component of the normal if up is classic up == 0, 1, 0) - It ranges from 0=vertical terrain to 1=flat terrain
 				float upComponent = float(normal.dot(up));
 				
-				//float slopeVerticalFactor = 4.0f;	// if higher slope will have higher maximum and so rocks will be more diffuse on slopes
-				//float slopeFlatFactor = 1.0f;		// if higher slope will have lesser mininum and maximum so rocks will be less diffuse on slopes
-				//float dirtOnRocksFactor = 2.0f;	// if higher dirt will be more diffuse on rocks
-				//float highElevationFactor = 4.0f;	// if higher high elevation amount will be higher at lower altitude
-				//float lowElevationFactor = 2.0f;	// if higher low elevation amount will be higher at higher altitude
-				//size_t splatMapMode = 1;
-
 				// (1.0f - upComponent) ranges from 0=flat terrain to 1=vertical terrain so slope ranges from 0-slopeFlatFactor=flat terrain to slopeVerticalFactor-slopeFlatFactor=vertical terrain
 				float slope = (slopeVerticalFactor * (1.0f - upComponent)) - slopeFlatFactor;
 
@@ -1894,8 +1887,8 @@ namespace TheWorld_Utils
 				float rocksAmount = TheWorld_Utils::Utils::clamp<float>(slope, 0.0f, 1.0f);								// rocksAmount is max when slope is greater than 1 (vertical enough) and is null when slope is less than 0 (flat enough), otherwise it grows with the slope (if slope between 0 and 1)
 				float dirtAmount = TheWorld_Utils::Utils::clamp<float>(rocksAmount * dirtOnRocksFactor, 0.0f, 1.0f);	// dirt grows on rocks
 				float highElevationAmount = highElevationFactor * ((h - terrainEdit->minHeight) / diffAltitude) - lowElevationFactor;		// ranges from -lowElevationFactor to highElevationFactor-lowElevationFactor
-				highElevationAmount = TheWorld_Utils::Utils::clamp<float>(highElevationAmount, 0.0f, 1.0f);		// highElevationAmount is capped from 0 and 1
-				float lowElevationAmount = 1.0f - highElevationAmount;											// lowElevationAmount is the complement of highElevationAmount in range 0/1
+				highElevationAmount = TheWorld_Utils::Utils::clamp<float>(highElevationAmount, 0.0f, 1.0f);				// highElevationAmount is capped from 0 and 1
+				float lowElevationAmount = 1.0f - highElevationAmount;													// lowElevationAmount is the complement of highElevationAmount in range 0/1
 
 				//if (rocksAmount == 0.0f)
 				//	rocksAmount = 0.0f;
