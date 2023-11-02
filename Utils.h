@@ -497,6 +497,7 @@ namespace TheWorld_Utils
 		public:
 			std::string meshId;
 			TheWorld_Utils::MemoryBuffer* terrainEditValues = nullptr;
+			TheWorld_Utils::TerrainEdit* terrainEdit = nullptr;
 			float minHeight = 0.0f;
 			float maxHeight = 0.0f;
 			TheWorld_Utils::MemoryBuffer* heights16Buffer = nullptr;
