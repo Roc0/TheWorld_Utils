@@ -3561,12 +3561,12 @@ namespace TheWorld_Utils
 	size_t ThreadPool::getNumWorkingThreads(size_t& maxThreads)
 	{
 		maxThreads = m_threads.size();
-		return m_workingThreads;
+		return m_numWorkingThreads;
 	}
 		
 	bool ThreadPool::allThreadsWorking(void)
 	{
-		return m_workingThreads >= m_threads.size();
+		return m_numWorkingThreads >= m_threads.size();
 	}
 
 	void ThreadPool::ThreadLoop()
@@ -3577,6 +3577,10 @@ namespace TheWorld_Utils
 		//{
 		//	(*m_threadInitFunction)();
 		//}
+
+		DWORD tid = GetCurrentThreadId();
+		std::thread::id this_id = std::this_thread::get_id();
+		size_t _tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
 
 		while (true)
 		{
@@ -3590,25 +3594,35 @@ namespace TheWorld_Utils
 				}
 				job = m_jobs.front();
 				m_jobs.pop();
-				m_workingThreads++;
+
+				{
+					std::unique_lock<std::mutex> lock(m_threadmap_mutex);
+					m_numWorkingThreads++;
+					m_workingThreads[tid] = m_numWorkingThreads;
+				}
 
 				TheWorld_Utils::MsTimePoint now = std::chrono::time_point_cast<TheWorld_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
 				size_t numThreads = m_threads.size();
-				bool allThreadsWorking = m_workingThreads >= numThreads;
+				bool allThreadsWorking = m_numWorkingThreads >= numThreads;
 				if ((now - m_lastDiagnosticTime).count() >= 1000)
 				{
 					if (allThreadsWorking)
-						PLOG_INFO << "ThreadPool " << m_label << " has all threads working (" << std::to_string(m_workingThreads) << ":" << std::to_string(numThreads) << ") - Queue size: " << m_jobs.size();
+						PLOG_INFO << "ThreadPool " << m_label << " has all threads working (" << std::to_string(m_numWorkingThreads) << ":" << std::to_string(numThreads) << ") - Queue size: " << m_jobs.size();
 					//else
 					//	if (allThreadsWorking != m_lastAllWorkingStatus)
-					//		PLOG_INFO << "ThreadPool " << m_label << " has free threads (" << std::to_string(m_workingThreads + 1) << ":" << std::to_string(numThreads) << ")";
+					//		PLOG_INFO << "ThreadPool " << m_label << " has free threads (" << std::to_string(m_numWorkingThreads + 1) << ":" << std::to_string(numThreads) << ")";
 
 					m_lastDiagnosticTime = now;
 					m_lastAllWorkingStatus = allThreadsWorking;
 				}
 			}
 			job();
-			m_workingThreads--;
+			{
+				std::unique_lock<std::mutex> lock(m_threadmap_mutex);
+				if (m_workingThreads.contains(tid))
+					m_workingThreads.erase(tid);
+				m_numWorkingThreads--;
+			}
 		}
 
 		if (m_threadInitDeinit != nullptr)

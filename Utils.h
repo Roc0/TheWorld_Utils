@@ -21,6 +21,7 @@
 #include <vector>
 #include <queue>
 #include <thread>
+#include <map>
 #include <functional>
 #include <exception>
 #include <plog/Log.h>
@@ -950,8 +951,10 @@ namespace TheWorld_Utils
 
 		std::string m_label;
 		bool m_should_terminate = false;           // Tells threads to stop looking for jobs
-		size_t m_workingThreads = 0;
+		size_t m_numWorkingThreads = 0;
+		std::map<DWORD, size_t> m_workingThreads;
 		std::mutex m_queue_mutex;                  // Prevents data races to the job queue
+		std::mutex m_threadmap_mutex;                  // Prevents data races to the job queue
 		std::condition_variable m_mutex_condition; // Allows threads to wait on new jobs or termination 
 		std::vector<std::thread> m_threads;
 		std::queue<std::function<void()>> m_jobs;
