@@ -2629,55 +2629,55 @@ namespace TheWorld_Utils
 
 		if (data.heightsUpdated)
 		{
-			calcMinMxHeight(numVerticesPerSize, terrainEdit, *data.heights32Buffer);
+			calcMinMaxHeight(numVerticesPerSize, terrainEdit, *data.heights32Buffer);
 		}
 
 		if (northData.heightsUpdated && northData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* northTerrainEdit = (TerrainEdit*)northData.terrainEditValues->ptr();
-			calcMinMxHeight(numVerticesPerSize, northTerrainEdit, *northData.heights32Buffer);
+			calcMinMaxHeight(numVerticesPerSize, northTerrainEdit, *northData.heights32Buffer);
 		}
 
 		if (southData.heightsUpdated && southData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* southTerrainEdit = (TerrainEdit*)southData.terrainEditValues->ptr();
-			calcMinMxHeight(numVerticesPerSize, southTerrainEdit, *southData.heights32Buffer);
+			calcMinMaxHeight(numVerticesPerSize, southTerrainEdit, *southData.heights32Buffer);
 		}
 
 		if (westData.heightsUpdated && westData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* westTerrainEdit = (TerrainEdit*)westData.terrainEditValues->ptr();
-			calcMinMxHeight(numVerticesPerSize, westTerrainEdit, *westData.heights32Buffer);
+			calcMinMaxHeight(numVerticesPerSize, westTerrainEdit, *westData.heights32Buffer);
 		}
 
 		if (eastData.heightsUpdated && eastData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* eastTerrainEdit = (TerrainEdit*)eastData.terrainEditValues->ptr();
-			calcMinMxHeight(numVerticesPerSize, eastTerrainEdit, *eastData.heights32Buffer);
+			calcMinMaxHeight(numVerticesPerSize, eastTerrainEdit, *eastData.heights32Buffer);
 		}
 
 		if (northwestData.heightsUpdated && northwestData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* northwestTerrainEdit = (TerrainEdit*)northwestData.terrainEditValues->ptr();
-			calcMinMxHeight(numVerticesPerSize, northwestTerrainEdit, *northwestData.heights32Buffer);
+			calcMinMaxHeight(numVerticesPerSize, northwestTerrainEdit, *northwestData.heights32Buffer);
 		}
 
 		if (northeastData.heightsUpdated && northeastData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* northeastTerrainEdit = (TerrainEdit*)northeastData.terrainEditValues->ptr();
-			calcMinMxHeight(numVerticesPerSize, northeastTerrainEdit, *northeastData.heights32Buffer);
+			calcMinMaxHeight(numVerticesPerSize, northeastTerrainEdit, *northeastData.heights32Buffer);
 		}
 
 		if (southwestData.heightsUpdated && southwestData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* southwesthTerrainEdit = (TerrainEdit*)southwestData.terrainEditValues->ptr();
-			calcMinMxHeight(numVerticesPerSize, southwesthTerrainEdit, *southwestData.heights32Buffer);
+			calcMinMaxHeight(numVerticesPerSize, southwesthTerrainEdit, *southwestData.heights32Buffer);
 		}
 
 		if (southeastData.heightsUpdated && southeastData.terrainEditValues != nullptr)
 		{
 			TerrainEdit* southeastTerrainEdit = (TerrainEdit*)southeastData.terrainEditValues->ptr();
-			calcMinMxHeight(numVerticesPerSize, southeastTerrainEdit, *southeastData.heights32Buffer);
+			calcMinMaxHeight(numVerticesPerSize, southeastTerrainEdit, *southeastData.heights32Buffer);
 		}
 
 		return updated;
@@ -2808,7 +2808,7 @@ namespace TheWorld_Utils
 		return updated;
 	}
 		
-	void MeshCacheBuffer::calcMinMxHeight(size_t numVerticesPerSize, TheWorld_Utils::TerrainEdit* terrainEdit, TheWorld_Utils::MemoryBuffer& heights32Buffer)
+	void MeshCacheBuffer::calcMinMaxHeight(size_t numVerticesPerSize, TheWorld_Utils::TerrainEdit* terrainEdit, TheWorld_Utils::MemoryBuffer& heights32Buffer)
 	{
 		terrainEdit->minHeight = FLT_MAX;
 		terrainEdit->maxHeight = -FLT_MAX;
