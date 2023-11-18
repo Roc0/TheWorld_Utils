@@ -22,6 +22,7 @@
 #include <queue>
 #include <thread>
 #include <map>
+#include <mutex>
 #include <functional>
 #include <exception>
 #include <plog/Log.h>

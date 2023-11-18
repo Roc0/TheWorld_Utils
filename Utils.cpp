@@ -52,7 +52,7 @@ namespace TheWorld_Utils
 			throw(std::exception((std::string(__FUNCTION__) + std::string("Color image length not valid")).c_str()));
 		width = heigth = (size_t)d;
 
-		// Bump image formal controls
+		// Bump/Displ/Depth image formal controls
 		if (bumpImage.size() > 0)
 		{
 			d = sqrt(bumpImage.size());
